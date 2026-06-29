@@ -1,0 +1,23 @@
+{
+  "httpPort": 0,
+  "extensions": {
+    "express": {
+      "enabled": false
+    },
+    "handlebars": {
+      "enabled": true
+    },
+    "html": {
+      "enabled": true
+    },
+    "jsreport-express": {
+      "enabled": false
+    }
+  },
+  "templates": {
+    "allowedModules": ["*"]
+  },
+  "store": {
+    "provider": "fs"
+  }
+}

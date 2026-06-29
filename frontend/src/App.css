@@ -1,0 +1,145 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #f4f6fa;
+  font-family: Arial, sans-serif;
+}
+
+.designer-page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  height: 60px;
+  background: white;
+
+  border-bottom:
+    1px solid #ddd;
+
+  display: flex;
+
+  align-items: center;
+
+  padding: 0 20px;
+}
+
+.designer-content {
+  flex: 1;
+
+  display: grid;
+
+  grid-template-columns:
+    220px
+    1fr
+    280px;
+}
+
+.sidebar {
+  background: white;
+
+  border-right:
+    1px solid #ddd;
+
+  padding: 20px;
+}
+
+.sidebar button {
+  width: 100%;
+
+  margin-top: 10px;
+
+  padding: 10px;
+
+  cursor: pointer;
+}
+
+.canvas {
+  overflow: auto;
+
+  padding: 40px;
+}
+
+.report-page {
+
+  width: 900px;
+
+  min-height: 1200px;
+
+  background: white;
+
+  margin: auto;
+
+  padding: 40px;
+
+  box-shadow:
+    0 0 20px
+    rgba(0,0,0,.08);
+}
+
+.component {
+  margin-bottom: 25px;
+
+  padding: 10px;
+}
+
+.selected {
+  border: 2px solid #4f46e5;
+}
+
+.properties {
+  background: white;
+
+  border-left:
+    1px solid #ddd;
+
+  padding: 20px;
+}
+
+.properties input {
+  width: 100%;
+
+  padding: 10px;
+
+  margin-top: 10px;
+
+  margin-bottom: 20px;
+}
+
+.designer-table {
+  width: 100%;
+
+  border-collapse: collapse;
+}
+
+.designer-table th,
+.designer-table td {
+
+  border: 1px solid #ddd;
+
+  padding: 10px;
+}
+
+.designer-table th {
+  background: #f1f5f9;
+}
+
+.delete-btn {
+
+  width: 100%;
+
+  background: #dc2626;
+
+  color: white;
+
+  border: none;
+
+  padding: 10px;
+
+  cursor: pointer;
+}
