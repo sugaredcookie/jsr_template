@@ -1,43 +1,102 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Report Designer</title>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    
-    <style>
-      .canvas {
-        background: #f8fafc;
-        border: 2px dashed #cbd5e1;
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Report Designer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <style>
+    .canvas {
+      background: #f8fafc;
+      border: 2px dashed #cbd5e1;
+    }
+
+    /* Custom Micro-Interaction Keyframes & Utility Animations */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(4px);
       }
 
-      /* Custom Micro-Interaction Keyframes & Utility Animations */
-      @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(4px); }
-        to { opacity: 1; transform: translateY(0); }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(-8px);
       }
 
-      @keyframes slideIn {
-        from { opacity: 0; transform: translateX(-8px); }
-        to { opacity: 1; transform: translateX(0); }
+      to {
+        opacity: 1;
+        transform: translateX(0);
       }
+    }
 
-      .animate-fade-in {
-        animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-      }
+    .animate-fade-in {
+      animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
 
-      .animate-slide-in {
-        animation: slideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-      }
-    </style>
-  </head>
-  <body class="bg-gray-100 min-h-screen overflow-hidden">
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+    .animate-slide-in {
+      animation: slideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .animate-fade-in {
+      animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .animate-slide-in {
+      animation: slideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    /* NEW: Silicon Minimalist Glassmorphism Overlay Utilities */
+    .glass-toolbar {
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .glass-sidebar {
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    /* Micro-interactions for buttons */
+    .btn-gradient-indigo {
+      background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+      box-shadow: 0 4px 14px 0 rgba(79, 70, 229, 0.25);
+    }
+
+    .btn-gradient-indigo:hover {
+      box-shadow: 0 6px 20px 0 rgba(79, 70, 229, 0.35);
+    }
+
+    .btn-gradient-purple {
+      background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%);
+      box-shadow: 0 4px 14px 0 rgba(124, 58, 237, 0.2);
+    }
+
+    .btn-gradient-purple:hover {
+      box-shadow: 0 6px 20px 0 rgba(124, 58, 237, 0.3);
+    }
+
+    /* Custom input styling over-rides */
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen overflow-hidden">
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+
 </html>
