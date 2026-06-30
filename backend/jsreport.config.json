@@ -1,17 +1,11 @@
 {
-  "httpPort": 0,
+  "httpPort": 5488,
   "extensions": {
     "express": {
-      "enabled": false
+      "enabled": true
     },
     "handlebars": {
       "enabled": true
-    },
-    "html": {
-      "enabled": true
-    },
-    "jsreport-express": {
-      "enabled": false
     }
   },
   "templates": {
