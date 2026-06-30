@@ -5,7 +5,7 @@ import DesignerPage from './pages/DesignerPage';
 function App() {
   return (
     <Router>
-      <div className="h-screen overflow-hidden">
+      <div className="h-screen overflow-hidden bg-gray-100">
         <Routes>
           <Route path="/" element={<DesignerPage />} />
         </Routes>
