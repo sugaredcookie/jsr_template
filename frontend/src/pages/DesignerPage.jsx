@@ -47,23 +47,29 @@ const DesignerPage = () => {
     });
   }, []);
 
-  // Add Component with Advanced Styling States
+  // Add Component Factory Function
   const addComponent = useCallback((type) => {
     const currentId = nextId;
-    const newComponent = {
-      id: currentId,
-      type: type,
-      props: type === 'text'
-        ? { 
-            value: 'Double click to edit me', 
-            fontSize: 16, 
-            bold: false,
-            align: 'left',
-            color: '#1e293b',
-            fontFamily: 'Arial'
-          }
-        : { columns: csvHeaders.length > 0 ? csvHeaders : ['Column 1', 'Column 2', 'Column 3'] }
-    };
+    let props = {};
+
+    if (type === 'text') {
+      props = { 
+        value: 'Double click to edit me', 
+        fontSize: 16, 
+        bold: false,
+        align: 'left',
+        color: '#1e293b',
+        fontFamily: 'Arial'
+      };
+    } else if (type === 'table') {
+      props = { columns: csvHeaders.length > 0 ? csvHeaders : ['Column 1', 'Column 2', 'Column 3'] };
+    } else if (type === 'spacer') {
+      props = { height: 24, variant: 'line' }; // variant: 'line' (visible divider) or 'space' (blank gap)
+    } else if (type === 'page-break') {
+      props = {}; // Pure marker node, structural parameters only
+    }
+
+    const newComponent = { id: currentId, type, props };
 
     setComponents(prev => [...prev, newComponent]);
     setNextId(prev => prev + 1);
@@ -113,7 +119,7 @@ const DesignerPage = () => {
     setDraggedIdx(null);
   };
 
-  // Generate HTML compilation block parsing typographic structures
+  // Compile Canvas Layout State array into raw production HTML blocks
   const handleGeneratePreview = useCallback(async () => {
     if (!csvData.length) {
       alert('Please upload a CSV file first.');
@@ -134,7 +140,6 @@ const DesignerPage = () => {
           `white-space: pre-wrap`,
           `word-break: break-word`
         ].join('; ');
-
         compiledHtml += `<p style="${styles}">${comp.props.value}</p>`;
       } else if (comp.type === 'table') {
         compiledHtml += `<table style="width:100%; border-collapse:collapse; margin-bottom:20px; font-family: sans-serif; font-size: 13px;"><thead><tr style="background:#f8fafc;">`;
@@ -151,6 +156,14 @@ const DesignerPage = () => {
           compiledHtml += `</tr>`;
         });
         compiledHtml += `</tbody></table>`;
+      } else if (comp.type === 'spacer') {
+        if (comp.props.variant === 'line') {
+          compiledHtml += `<div style="margin: ${parseInt(comp.props.height || 24) / 2}px 0; border-top: 1px solid #e2e8f0; width: 100%;"></div>`;
+        } else {
+          compiledHtml += `<div style="height: ${comp.props.height || 24}px; width: 100%;"></div>`;
+        }
+      } else if (comp.type === 'page-break') {
+        compiledHtml += `<div style="page-break-before: always; height: 0; margin: 0; border: none;"></div>`;
       }
     });
     compiledHtml += `</div>`;
@@ -173,8 +186,8 @@ const DesignerPage = () => {
           </h1>
         </div>
 
-        <div className="flex items-center gap-3 mx-auto">
-          <label className="cursor-pointer flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl shadow-xs hover:bg-indigo-700 hover:shadow-md active:scale-98 text-xs font-medium transition-all duration-200">
+        <div className="flex items-center gap-2 mx-auto">
+          <label className="cursor-pointer flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl shadow-xs hover:bg-indigo-700 hover:shadow-md active:scale-98 text-xs font-medium transition-all duration-200 mr-2">
             <i className="fa-solid fa-cloud-arrow-up text-xs"></i>
             <span>Upload CSV</span>
             <input type="file" accept=".csv" className="hidden" onChange={handleFileUpload} />
@@ -184,18 +197,34 @@ const DesignerPage = () => {
 
           <button 
             onClick={() => addComponent('text')} 
-            className="flex items-center gap-2 px-3.5 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 hover:border-slate-300 shadow-3xs active:scale-98 transition-all duration-200 text-xs font-medium"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 hover:border-slate-300 shadow-3xs transition-all text-xs font-medium"
           >
             <i className="fa-solid fa-font text-blue-500 text-xs"></i>
-            <span>Add Text</span>
+            <span>Text</span>
           </button>
 
           <button 
             onClick={() => addComponent('table')} 
-            className="flex items-center gap-2 px-3.5 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 hover:border-slate-300 shadow-3xs active:scale-98 transition-all duration-200 text-xs font-medium"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 hover:border-slate-300 shadow-3xs transition-all text-xs font-medium"
           >
             <i className="fa-solid fa-table-columns text-emerald-500 text-xs"></i>
-            <span>Add Table</span>
+            <span>Table</span>
+          </button>
+
+          <button 
+            onClick={() => addComponent('spacer')} 
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 hover:border-slate-300 shadow-3xs transition-all text-xs font-medium"
+          >
+            <i className="fa-solid fa-arrows-left-right-to-line text-amber-500 text-xs rotate-90"></i>
+            <span>Spacer / Line</span>
+          </button>
+
+          <button 
+            onClick={() => addComponent('page-break')} 
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 hover:border-slate-300 shadow-3xs transition-all text-xs font-medium"
+          >
+            <i className="fa-solid fa-scissors text-purple-500 text-xs"></i>
+            <span>Page Break</span>
           </button>
         </div>
 
@@ -276,10 +305,10 @@ const DesignerPage = () => {
                     <i className="fa-solid fa-cubes text-slate-400"></i>
                   </div>
                   <p className="text-xs font-semibold text-slate-700">Canvas Is Isolated</p>
-                  <p className="text-[11px] mt-1 text-slate-400 max-w-xs">Append text formatting strings or spreadsheet grids from the header context to configure compile logic blueprints.</p>
+                  <p className="text-[11px] mt-1 text-slate-400 max-w-xs">Append components from the top bar to design your document schema layout blueprints.</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {components.map((comp, index) => {
                     const isSelected = selectedComponentId === comp.id;
                     const isEditing = editingId === comp.id;
@@ -298,24 +327,24 @@ const DesignerPage = () => {
                         className={`group relative p-4 pl-10 rounded-xl border transition-all duration-200 cursor-pointer ${
                           isSelected 
                             ? 'border-indigo-500 bg-indigo-50/5 shadow-xs ring-4 ring-indigo-500/5' 
-                            : 'border-slate-100 hover:border-slate-300 hover:shadow-3xs bg-white'
+                            : 'border-slate-100 hover:border-slate-200 hover:shadow-3xs bg-white'
                         } ${draggedIdx === index ? 'opacity-20 scale-98 duration-100' : 'opacity-100'}`}
                       >
-                        {/* Drag Handle */}
+                        {/* Drag Handle Handle */}
                         <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-300 group-hover:text-slate-400 cursor-grab active:cursor-grabbing p-1 transition-colors">
                           <i className="fa-solid fa-grip-vertical text-xs"></i>
                         </div>
 
-                        {/* Module Badge Indicator */}
-                        <div className="absolute top-2 right-2.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-                          <span className="bg-slate-800 text-white text-[9px] font-medium tracking-wide px-1.5 py-0.5 rounded-md shadow-3xs">
-                            {comp.type === 'text' ? 'TEXT BLOCK' : 'DATA TABLE'}
+                        {/* Top Module Badge Tracker */}
+                        <div className="absolute top-2 right-2.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                          <span className="bg-slate-800 text-white text-[8px] font-bold tracking-wide px-1.5 py-0.5 rounded-md shadow-3xs uppercase">
+                            {comp.type}
                           </span>
                         </div>
 
-                        {/* Renderer Blocks */}
+                        {/* Node Render Engine Switches */}
                         <div className="pointer-events-auto">
-                          {comp.type === 'text' ? (
+                          {comp.type === 'text' && (
                             <div onDoubleClick={() => setEditingId(comp.id)}>
                               {isEditing ? (
                                 <input
@@ -324,7 +353,7 @@ const DesignerPage = () => {
                                   onChange={(e) => handleTextEdit(comp.id, e.target.value)}
                                   onBlur={() => setEditingId(null)}
                                   onKeyDown={(e) => { if (e.key === 'Enter') setEditingId(null); }}
-                                  className="w-full border border-indigo-400 rounded-lg px-2.5 py-1.5 shadow-2xs outline-none text-slate-900 bg-white font-normal text-xs animate-fade-in"
+                                  className="w-full border border-indigo-400 rounded-lg px-2.5 py-1.5 shadow-2xs outline-none text-slate-900 bg-white font-normal text-xs"
                                   autoFocus
                                 />
                               ) : (
@@ -338,13 +367,14 @@ const DesignerPage = () => {
                                   }}
                                   className="break-words min-h-[22px]"
                                 >
-                                  {comp.props.value || <span className="text-slate-300 italic font-light">Empty layout string token</span>}
+                                  {comp.props.value || <span className="text-slate-300 italic font-light">Empty text string node</span>}
                                 </div>
                               )}
                             </div>
-                          ) : (
-                            /* Structural Table Elements Container */
-                            <div className="overflow-x-auto pointer-events-none select-none rounded-lg border border-slate-200 mt-0.5 shadow-3xs bg-white">
+                          )}
+
+                          {comp.type === 'table' && (
+                            <div className="overflow-x-auto pointer-events-none select-none rounded-lg border border-slate-200 shadow-3xs bg-white">
                               <table className="w-full text-[11px] text-left border-collapse">
                                 <thead>
                                   <tr className="bg-slate-50/60 border-b border-slate-200">
@@ -369,6 +399,30 @@ const DesignerPage = () => {
                               </table>
                             </div>
                           )}
+
+                          {comp.type === 'spacer' && (
+                            <div className="py-2 pointer-events-none select-none">
+                              {comp.props.variant === 'line' ? (
+                                <div className="flex items-center" style={{ height: `${comp.props.height || 24}px` }}>
+                                  <div className="w-full border-t border-slate-200 border-dashed"></div>
+                                </div>
+                              ) : (
+                                <div 
+                                  style={{ height: `${comp.props.height || 24}px` }} 
+                                  className="w-full bg-slate-50/60 rounded border border-slate-100 border-dashed flex items-center justify-center text-[10px] text-slate-400 font-mono"
+                                >
+                                  Blank Space ({comp.props.height}px)
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {comp.type === 'page-break' && (
+                            <div className="py-1 pointer-events-none select-none border-2 border-dashed border-purple-100 bg-purple-50/30 rounded-xl p-3 flex items-center justify-center gap-2 text-xs text-purple-600 font-semibold tracking-wide">
+                              <i className="fa-solid fa-scissors text-purple-400"></i>
+                              <span>jsreport PDF Page Break (Forces next block onto new sheet)</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -388,8 +442,11 @@ const DesignerPage = () => {
                 <div>
                   <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Node Type</label>
                   <p className="font-semibold text-[11px] capitalize bg-slate-50 border border-slate-200/60 text-slate-700 px-2.5 py-1 rounded-lg inline-flex items-center gap-1.5 shadow-3xs">
-                    {selectedComponent.type === 'text' ? <i className="fa-solid fa-font text-blue-500"></i> : <i className="fa-solid fa-table text-emerald-500"></i>}
-                    {selectedComponent.type}
+                    {selectedComponent.type === 'text' && <i className="fa-solid fa-font text-blue-500"></i>}
+                    {selectedComponent.type === 'table' && <i className="fa-solid fa-table text-emerald-500"></i>}
+                    {selectedComponent.type === 'spacer' && <i className="fa-solid fa-arrows-left-right-to-line text-amber-500 rotate-90"></i>}
+                    {selectedComponent.type === 'page-break' && <i className="fa-solid fa-scissors text-purple-500"></i>}
+                    {selectedComponent.type === 'page-break' ? 'Page Break' : selectedComponent.type}
                   </p>
                 </div>
 
@@ -403,14 +460,12 @@ const DesignerPage = () => {
                         className="w-full text-xs border border-slate-200 bg-slate-50/30 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none h-20 resize-none transition-all"
                       />
                     </div>
-                    
-                    {/* Font Family Selection Dropdown */}
                     <div>
                       <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Font Family</label>
                       <select
                         value={selectedComponent.props.fontFamily || 'Arial'}
                         onChange={(e) => updateComponent(selectedComponent.id, { fontFamily: e.target.value })}
-                        className="w-full text-xs border border-slate-200 bg-slate-50 rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium text-slate-700"
+                        className="w-full text-xs border border-slate-200 bg-slate-50 rounded-xl p-2.5 outline-none font-medium text-slate-700"
                       >
                         <option value="Arial">Arial (Sans-Serif)</option>
                         <option value="Helvetica">Helvetica (Modern)</option>
@@ -418,8 +473,6 @@ const DesignerPage = () => {
                         <option value="Courier New">Courier New (Monospace)</option>
                       </select>
                     </div>
-
-                    {/* Text Alignment Button Toggles */}
                     <div>
                       <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Text Alignment</label>
                       <div className="grid grid-cols-4 gap-1 bg-slate-50 border p-1 rounded-xl">
@@ -436,9 +489,7 @@ const DesignerPage = () => {
                               type="button"
                               onClick={() => updateComponent(selectedComponent.id, { align: btn.key })}
                               className={`py-1.5 rounded-lg text-xs transition-all ${
-                                isActive 
-                                  ? 'bg-white text-indigo-600 shadow-3xs font-bold border border-slate-100' 
-                                  : 'text-slate-400 hover:text-slate-600'
+                                isActive ? 'bg-white text-indigo-600 shadow-3xs font-bold border border-slate-100' : 'text-slate-400 hover:text-slate-600'
                               }`}
                             >
                               <i className={`fa-solid ${btn.icon}`}></i>
@@ -447,8 +498,6 @@ const DesignerPage = () => {
                         })}
                       </div>
                     </div>
-
-                    {/* Color Swatch Picker */}
                     <div>
                       <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Font Color</label>
                       <div className="flex items-center gap-2 border border-slate-200 bg-slate-50/30 rounded-xl p-1.5 pl-3">
@@ -458,31 +507,26 @@ const DesignerPage = () => {
                           onChange={(e) => updateComponent(selectedComponent.id, { color: e.target.value })}
                           className="w-7 h-7 rounded-lg border border-slate-200 cursor-pointer overflow-hidden bg-transparent"
                         />
-                        <span className="text-xs font-mono text-slate-500 uppercase tracking-wider select-text">
-                          {selectedComponent.props.color || '#1E293B'}
-                        </span>
+                        <span className="text-xs font-mono text-slate-500 uppercase tracking-wider">{selectedComponent.props.color || '#1E293B'}</span>
                       </div>
                     </div>
-
                     <div>
                       <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Font Scale (px)</label>
                       <input
                         type="number"
                         value={selectedComponent.props.fontSize || 16}
                         onChange={(e) => updateComponent(selectedComponent.id, { fontSize: parseInt(e.target.value) || 12 })}
-                        className="w-full text-xs border border-slate-200 bg-slate-50/30 rounded-xl p-2 focus:bg-white focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all"
+                        className="w-full text-xs border border-slate-200 bg-slate-50/30 rounded-xl p-2 outline-none"
                       />
                     </div>
-
-                    <label className="flex items-center gap-2.5 p-2.5 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-100/50 transition-colors">
+                    <label className="flex items-center gap-2.5 p-2.5 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer">
                       <input
                         type="checkbox"
-                        id="bold-check"
                         checked={selectedComponent.props.bold || false}
                         onChange={(e) => updateComponent(selectedComponent.id, { bold: e.target.checked })}
-                        className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500/10 border-slate-300"
+                        className="w-3.5 h-3.5 rounded text-indigo-600 border-slate-300"
                       />
-                      <span className="text-xs font-medium text-slate-700 cursor-pointer">Apply Bold Weight</span>
+                      <span className="text-xs font-medium text-slate-700">Apply Bold Weight</span>
                     </label>
                   </>
                 )}
@@ -495,7 +539,6 @@ const DesignerPage = () => {
                       {csvHeaders.length > 0 ? (
                         csvHeaders.map((col, i) => {
                           const isIncluded = selectedComponent.props.columns.includes(col);
-
                           return (
                             <button
                               key={i}
@@ -506,31 +549,76 @@ const DesignerPage = () => {
                                   updatedCols = selectedComponent.props.columns.filter(c => c !== col);
                                   if (updatedCols.length === 0) updatedCols = [col];
                                 } else {
-                                  updatedCols = csvHeaders.filter(h =>
-                                    selectedComponent.props.columns.includes(h) || h === col
-                                  );
+                                  updatedCols = csvHeaders.filter(h => selectedComponent.props.columns.includes(h) || h === col);
                                 }
                                 updateComponent(selectedComponent.id, { columns: updatedCols });
                               }}
                               className={`w-full text-left text-xs font-mono py-2 px-2.5 rounded-lg border shadow-3xs transition-all flex items-center justify-between group/btn ${
-                                isIncluded
-                                  ? 'bg-indigo-600 border-indigo-600 text-white font-medium transform translate-x-0.5'
-                                  : 'bg-white border-slate-200 text-slate-400 hover:text-slate-600 hover:border-slate-300'
+                                isIncluded ? 'bg-indigo-600 border-indigo-600 text-white font-medium transform translate-x-0.5' : 'bg-white border-slate-200 text-slate-400 hover:text-slate-600'
                               }`}
                             >
                               <span className="truncate pr-2">{col}</span>
                               <span className="text-[10px] flex-shrink-0">
-                                {isIncluded ? <i className="fa-solid fa-circle-check"></i> : <i className="fa-solid fa-circle-plus opacity-40 group-hover/btn:opacity-100 transition-opacity"></i>}
+                                {isIncluded ? <i className="fa-solid fa-circle-check"></i> : <i className="fa-solid fa-circle-plus opacity-40 group-hover/btn:opacity-100"></i>}
                               </span>
                             </button>
                           );
                         })
                       ) : (
-                        <div className="text-xs text-slate-400 p-4 text-center italic">
-                          No input attributes registered.
-                        </div>
+                        <div className="text-xs text-slate-400 p-4 text-center italic">No input attributes registered.</div>
                       )}
                     </div>
+                  </div>
+                )}
+
+                {selectedComponent.type === 'spacer' && (
+                  <>
+                    {/* Spacer Output Format Selector */}
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Spacer Variant</label>
+                      <div className="grid grid-cols-2 gap-1 bg-slate-50 border p-1 rounded-xl">
+                        {[
+                          { key: 'line', label: 'Solid Line' },
+                          { key: 'space', label: 'Blank Space' }
+                        ].map((v) => {
+                          const isActive = (selectedComponent.props.variant || 'line') === v.key;
+                          return (
+                            <button
+                              key={v.key}
+                              type="button"
+                              onClick={() => updateComponent(selectedComponent.id, { variant: v.key })}
+                              className={`py-1.5 text-xs rounded-lg font-medium transition-all ${
+                                isActive ? 'bg-white text-indigo-600 shadow-3xs border border-slate-100 font-semibold' : 'text-slate-400 hover:text-slate-600'
+                              }`}
+                            >
+                              {v.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Height Value Configurator */}
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Gap Height (px)</label>
+                      <input
+                        type="number"
+                        min="10"
+                        max="200"
+                        value={selectedComponent.props.height || 24}
+                        onChange={(e) => updateComponent(selectedComponent.id, { height: parseInt(e.target.value) || 10 })}
+                        className="w-full text-xs border border-slate-200 bg-slate-50/30 rounded-xl p-2.5 outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500/10 transition-all"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {selectedComponent.type === 'page-break' && (
+                  <div className="p-3 bg-purple-50/50 border border-purple-100 rounded-xl text-purple-900 text-xs leading-relaxed">
+                    <p className="font-semibold mb-1 flex items-center gap-1.5">
+                      <i className="fa-solid fa-circle-info"></i> No Configurations Needed
+                    </p>
+                    This is an absolute structural break node. It injects a hard page delimiter into the dynamic rendering sequence pipeline.
                   </div>
                 )}
 
