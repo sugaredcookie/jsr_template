@@ -266,9 +266,9 @@ const DesignerPage = () => {
       {/* Top Toolbar */}
       <div className="h-16 bg-white/75 backdrop-blur-md border-b border-white/60 flex items-center px-6 gap-6 shadow-xs sticky top-0 z-50">
         <div className="flex items-center gap-2.5 flex-shrink-0 group cursor-default transition-all duration-300 hover:opacity-90">
-          <div className="w-9 h-9 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center shadow-sm shadow-indigo-500/20 group-hover:scale-105 group-hover:rotate-3 transition-all duration-300">
+          {/* <div className="w-9 h-9 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center shadow-sm shadow-indigo-500/20 group-hover:scale-105 group-hover:rotate-3 transition-all duration-300">
             <i className="fa-solid fa-file-signature text-sm text-white"></i>
-          </div>
+          </div> */}
           <h1 className="text-md font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
             Report Designer
           </h1>

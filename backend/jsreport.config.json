@@ -1,5 +1,6 @@
 {
   "httpPort": 5488,
+  "trustUserCode": true,
   "extensions": {
     "express": {
       "enabled": true
