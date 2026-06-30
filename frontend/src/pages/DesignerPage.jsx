@@ -24,7 +24,6 @@ const DesignerPage = () => {
     const cellValue = parseFloat(String(rawValue).replace(/[^0-9.-]/g, ''));
     const targetLimit = parseFloat(rule.value);
 
-    // Handle numerical operations safely
     if (!isNaN(cellValue) && !isNaN(targetLimit)) {
       switch (rule.operator) {
         case '>': if (cellValue > targetLimit) return { backgroundColor: rule.bgWash, color: rule.textColor }; break;
@@ -35,7 +34,6 @@ const DesignerPage = () => {
       }
     }
     
-    // Fallback to plain text matching parameters if metrics are categorical strings
     const stringCell = String(rawValue).toLowerCase().trim();
     const stringTarget = String(rule.value).toLowerCase().trim();
     
@@ -48,15 +46,13 @@ const DesignerPage = () => {
   }, []);
 
   // Secondary clean evaluation wrapper for standalone analytical data targets
-  const evaluateMetricValue = (comp) => {
-    if (!csvData.length || !comp.props.column) return '—';
-    const targetColumn = comp.props.column;
-    const operation = comp.props.operation || 'COUNT';
+  const evaluateMetricValue = (column, operation) => {
+    if (!csvData.length || !column) return '—';
 
     if (operation === 'COUNT') return csvData.length.toLocaleString();
 
     const values = csvData
-      .map(row => parseFloat(String(row[targetColumn] || '').replace(/[^0-9.-]/g, '')))
+      .map(row => parseFloat(String(row[column] || '').replace(/[^0-9.-]/g, '')))
       .filter(v => !isNaN(v));
 
     if (values.length === 0) return '0';
@@ -91,18 +87,14 @@ const DesignerPage = () => {
 
           setComponents(prev => prev.map(comp => {
             if (comp.type === 'table') {
-              return { 
-                ...comp, 
-                props: { 
-                  ...comp.props, 
-                  columns: headers, 
-                  columnMetadata: {},
-                  highlightRule: null
-                } 
-              };
+              return { ...comp, props: { ...comp.props, columns: headers, columnMetadata: {} } };
             }
-            if (comp.type === 'metric-card' && !comp.props.column) {
-              return { ...comp, props: { ...comp.props, column: headers[0] } };
+            if (comp.type === 'grid-row') {
+              const updatedItems = comp.props.gridItems.map(item => ({
+                ...item,
+                column: item.column || headers[0]
+              }));
+              return { ...comp, props: { ...comp.props, gridItems: updatedItems } };
             }
             return comp;
           }));
@@ -129,20 +121,17 @@ const DesignerPage = () => {
         fontFamily: 'Arial'
       };
     } else if (type === 'table') {
-      props = { 
-        columns: csvHeaders.length > 0 ? csvHeaders : ['Column 1', 'Column 2', 'Column 3'], 
-        columnMetadata: {},
-        highlightRule: null
-      };
+      props = { columns: csvHeaders.length > 0 ? csvHeaders : ['Column 1', 'Column 2', 'Column 3'], columnMetadata: {}, highlightRule: null };
     } else if (type === 'spacer') {
       props = { height: 24, variant: 'line' };
     } else if (type === 'page-break') {
       props = {};
-    } else if (type === 'metric-card') {
+    } else if (type === 'grid-row') {
       props = {
-        title: 'Summary Metric Card',
-        column: csvHeaders.length > 0 ? csvHeaders[0] : '',
-        operation: 'COUNT'
+        gridItems: [
+          { id: `metric-1-${currentId}`, title: 'Headcount Summary', column: csvHeaders[0] || '', operation: 'COUNT' },
+          { id: `metric-2-${currentId}`, title: 'Performance Average', column: csvHeaders[0] || '', operation: 'AVG' }
+        ]
       };
     }
 
@@ -169,9 +158,7 @@ const DesignerPage = () => {
 
   const handleTextEdit = useCallback((id, newValue) => {
     setComponents(prev => prev.map(comp =>
-      comp.id === id && comp.type === 'text'
-        ? { ...comp, props: { ...comp.props, value: newValue } }
-        : comp
+      comp.id === id && comp.type === 'text' ? { ...comp, props: { ...comp.props, value: newValue } } : comp
     ));
   }, []);
 
@@ -196,7 +183,6 @@ const DesignerPage = () => {
     setDraggedIdx(null);
   };
 
-  // Compile Canvas Layout State array into raw production HTML blocks with conditional style mapping rules
   const handleGeneratePreview = useCallback(async () => {
     if (!csvData.length) {
       alert('Please upload a CSV file first.');
@@ -251,15 +237,18 @@ const DesignerPage = () => {
         }
       } else if (comp.type === 'page-break') {
         compiledHtml += `<div style="page-break-before: always; height: 0; margin: 0; border: none;"></div>`;
-      } else if (comp.type === 'metric-card') {
-        const metricVal = evaluateMetricValue(comp);
-        compiledHtml += `
-          <div style="padding: 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 20px; font-family: sans-serif; display: inline-block; min-width: 200px;">
-            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700; letter-spacing: 0.5px;">${comp.props.title || 'Metric'}</div>
-            <div style="font-size: 22px; font-weight: 700; color: #0f172a; margin-top: 4px;">${metricVal}</div>
-            <div style="font-size: 10px; color: #94a3b8; margin-top: 2px; font-family: monospace;">${comp.props.operation}(${comp.props.column || 'all'})</div>
-          </div>
-        `;
+      } else if (comp.type === 'grid-row') {
+        compiledHtml += `<div style="display: flex; gap: 16px; width: 100%; margin-bottom: 20px;">`;
+        comp.props.gridItems.forEach(item => {
+          const val = evaluateMetricValue(item.column, item.operation);
+          compiledHtml += `
+            <div style="flex: 1; padding: 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; font-family: sans-serif;">
+              <div style="font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: 700; letter-spacing: 0.5px;">${item.title}</div>
+              <div style="font-size: 20px; font-weight: 700; color: #0f172a; margin-top: 4px;">${val}</div>
+              <div style="font-size: 9px; color: #94a3b8; margin-top: 2px; font-family: monospace;">${item.operation}(${item.column || 'all'})</div>
+            </div>`;
+        });
+        compiledHtml += `</div>`;
       }
     });
     compiledHtml += `</div>`;
@@ -274,7 +263,7 @@ const DesignerPage = () => {
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-indigo-50/20 font-sans antialiased select-none text-slate-800">
       
-      {/* Glassmorphic Top Toolbar */}
+      {/* Top Toolbar */}
       <div className="h-16 bg-white/75 backdrop-blur-md border-b border-white/60 flex items-center px-6 gap-6 shadow-xs sticky top-0 z-50">
         <div className="flex items-center gap-2.5 flex-shrink-0 group cursor-default transition-all duration-300 hover:opacity-90">
           <div className="w-9 h-9 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center shadow-sm shadow-indigo-500/20 group-hover:scale-105 group-hover:rotate-3 transition-all duration-300">
@@ -285,7 +274,7 @@ const DesignerPage = () => {
           </h1>
         </div>
 
-        {/* Toolbar Action Buttons Grid */}
+        {/* Toolbar Buttons */}
         <div className="flex items-center gap-2 mx-auto bg-slate-200/40 p-1.5 rounded-2xl border border-slate-300/20 backdrop-blur-xs">
           <label className="cursor-pointer flex items-center gap-2 px-3.5 py-1.5 bg-white border border-slate-200/80 text-slate-700 rounded-xl shadow-3xs hover:bg-slate-50 hover:border-slate-300/80 text-xs font-semibold transform hover:-translate-y-0.5 active:translate-y-0 active:scale-98 transition-all duration-200">
             <i className="fa-solid fa-cloud-arrow-up text-indigo-500 text-xs"></i>
@@ -312,11 +301,11 @@ const DesignerPage = () => {
           </button>
 
           <button 
-            onClick={() => addComponent('metric-card')} 
+            onClick={() => addComponent('grid-row')} 
             className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200/80 text-slate-700 rounded-xl hover:bg-slate-50 shadow-3xs text-xs font-semibold transform hover:-translate-y-0.5 active:translate-y-0 active:scale-98 transition-all duration-200"
           >
             <i className="fa-solid fa-chart-pie text-violet-500 text-xs"></i>
-            <span>Metric Card</span>
+            <span>Infographic Grid</span>
           </button>
 
           <button 
@@ -348,7 +337,7 @@ const DesignerPage = () => {
         </button>
       </div>
 
-      {/* Primary Workspace Windows Layout Splitter */}
+      {/* Main Framework Splitter */}
       {isPreviewMode && previewHtml ? (
         <div className="flex-1 bg-slate-900/5 overflow-auto p-10 flex justify-center items-start animate-fade-in">
           <div className="w-full max-w-5xl border border-slate-200 bg-white shadow-xl rounded-2xl overflow-hidden transition-all duration-500 hover:shadow-2xl">
@@ -358,8 +347,8 @@ const DesignerPage = () => {
       ) : (
         <div className="flex flex-1 overflow-hidden">
           
-          {/* Glassmorphic Left Sidebar */}
-          <div className="w-72 bg-white/72 backdrop-blur-md border-r border-slate-200 flex flex-col shadow-3xs">
+          {/* Left Sidebar Tokens List */}
+          <div className="w-72 bg-white/70 backdrop-blur-md border-r border-slate-200 flex flex-col shadow-3xs">
             <div className="p-4 border-b border-slate-100 bg-white/40">
               <h2 className="uppercase text-[9px] tracking-wider text-slate-400 font-bold mb-2.5 flex items-center gap-1.5">
                 <i className="fa-solid fa-file-csv opacity-70"></i> Active Document
@@ -402,7 +391,7 @@ const DesignerPage = () => {
           <div className="flex-1 p-8 flex items-start justify-center overflow-auto bg-slate-900/[0.01]">
             <div className="bg-white/80 w-full max-w-4xl min-h-[720px] shadow-xs border border-slate-200/80 backdrop-blur-md rounded-3xl p-8 overflow-hidden transition-all duration-300">
               {components.length === 0 ? (
-                <div className="h-[520px] flex flex-col items-center justify-center text-center text-slate-400 border border-dashed border-slate-200/80 rounded-2xl bg-white/40 p-6 animate-fade-in">
+                <div className="h-[520px] flex flex-col items-center justify-center text-center text-slate-400 border border-dashed border-slate-200 rounded-2xl bg-white/40 p-6 animate-fade-in">
                   <div className="w-12 h-12 bg-gradient-to-tr from-slate-50 to-slate-100 border border-slate-200/60 rounded-xl flex items-center justify-center mb-3 shadow-3xs transform group-hover:scale-105 transition-all">
                     <i className="fa-solid fa-cubes text-slate-400 text-md"></i>
                   </div>
@@ -432,19 +421,16 @@ const DesignerPage = () => {
                             : 'border-slate-100 hover:border-slate-200 hover:shadow-3xs bg-white/70 hover:bg-white'
                         } ${draggedIdx === index ? 'opacity-20 scale-95 duration-100' : 'opacity-100'}`}
                       >
-                        {/* Drag Handle */}
                         <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-300 group-hover:text-indigo-400/80 cursor-grab active:cursor-grabbing p-1 rounded-lg hover:bg-slate-100 active:scale-95 transition-all">
                           <i className="fa-solid fa-grip-vertical text-xs"></i>
                         </div>
 
-                        {/* Top Module Context Tags */}
                         <div className="absolute top-2 right-2.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none z-10">
                           <span className="bg-slate-800 text-white text-[8px] font-bold tracking-wide px-2 py-0.5 rounded-md shadow-3xs uppercase">
-                            {comp.type === 'metric-card' ? 'Summary Metric' : comp.type}
+                            {comp.type === 'grid-row' ? 'Infographic Row' : comp.type}
                           </span>
                         </div>
 
-                        {/* Render Pipelines Switches */}
                         <div className="pointer-events-auto">
                           {comp.type === 'text' && (
                             <div onDoubleClick={() => setEditingId(comp.id)}>
@@ -455,7 +441,7 @@ const DesignerPage = () => {
                                   onChange={(e) => handleTextEdit(comp.id, e.target.value)}
                                   onBlur={() => setEditingId(null)}
                                   onKeyDown={(e) => { if (e.key === 'Enter') setEditingId(null); }}
-                                  className="w-full border-2 border-indigo-400 rounded-xl px-3 py-1.5 shadow-2xs outline-none text-slate-900 bg-white font-normal text-xs"
+                                  className="w-full border-2 border-indigo-400 rounded-xl px-3 py-1.5 shadow-2xs outline-none text-slate-900 bg-white font-medium text-xs animate-fade-in"
                                   autoFocus
                                 />
                               ) : (
@@ -469,7 +455,7 @@ const DesignerPage = () => {
                                   }}
                                   className="break-words min-h-[22px] transition-all"
                                 >
-                                  {comp.props.value || <span className="text-slate-300 italic font-light">Empty layout string template</span>}
+                                  {comp.props.value || <span className="text-slate-300 italic font-light">Empty layout copy block</span>}
                                 </div>
                               )}
                             </div>
@@ -483,7 +469,7 @@ const DesignerPage = () => {
                                     {comp.props.columns.map((col, idx) => {
                                       const meta = comp.props.columnMetadata?.[col] || { label: col, align: 'left', width: '' };
                                       return (
-                                        <th key={idx} style={{ textAlign: meta.align, width: meta.width ? `${meta.width}%` : 'auto' }} className="p-2 font-medium text-slate-600 font-mono text-[10px] overflow-hidden text-ellipsis whitespace-nowrap bg-slate-100/40">
+                                        <th key={idx} style={{ textAlign: meta.align, width: meta.width ? `${meta.width}%` : 'auto' }} className="p-2.5 font-semibold text-slate-600 font-mono text-[10px] overflow-hidden text-ellipsis whitespace-nowrap bg-slate-100/40">
                                           {meta.label || col}
                                         </th>
                                       );
@@ -497,25 +483,9 @@ const DesignerPage = () => {
 
                                     if (csvData.length > 0 && rowData && comp.props.highlightRule) {
                                       const hr = comp.props.highlightRule;
-                                      if (hr.column && hr.value) {
-                                        const rawCellVal = String(rowData[hr.column] || '');
-                                        const parseCell = parseFloat(rawCellVal.replace(/[^0-9.-]/g, ''));
-                                        const parseTarget = parseFloat(hr.value);
-                                        
-                                        let passed = false;
-                                        if (!isNaN(parseCell) && !isNaN(parseTarget)) {
-                                          if (hr.operator === '>') passed = parseCell > parseTarget;
-                                          if (hr.operator === '<') passed = parseCell < parseTarget;
-                                          if (hr.operator === '==') passed = parseCell === parseTarget;
-                                          if (hr.operator === '!=') passed = parseCell !== parseTarget;
-                                        } else {
-                                          if (hr.operator === '==') passed = rawCellVal.toLowerCase() === String(hr.value).toLowerCase();
-                                          if (hr.operator === '!=') passed = rawCellVal.toLowerCase() !== String(hr.value).toLowerCase();
-                                        }
-
-                                        if (passed) {
-                                          computedRowStyle = { backgroundColor: hr.bgWash || '#f0fdf4', color: hr.textColor || '#166534' };
-                                        }
+                                      const styleResult = evaluateRowHighlightStyles(rowData, hr);
+                                      if (styleResult.backgroundColor) {
+                                        computedRowStyle = styleResult;
                                       }
                                     }
 
@@ -546,7 +516,7 @@ const DesignerPage = () => {
                               ) : (
                                 <div 
                                   style={{ height: `${comp.props.height || 24}px` }} 
-                                  className="w-full bg-slate-50/60 rounded border border-slate-100 border-dashed flex items-center justify-center text-[10px] text-slate-400 font-mono"
+                                  className="w-full bg-slate-50/50 rounded-xl border border-slate-100 border-dashed flex items-center justify-center text-[10px] text-slate-400 font-mono"
                                 >
                                   Blank Whitespace ({comp.props.height}px)
                                 </div>
@@ -561,18 +531,17 @@ const DesignerPage = () => {
                             </div>
                           )}
 
-                          {comp.type === 'metric-card' && (
-                            <div className="p-4 bg-gradient-to-br from-slate-50 to-slate-100/50 border border-slate-200/80 rounded-2xl inline-block min-w-[220px] shadow-3xs animate-fade-in pointer-events-none select-none transform hover:scale-101 transition-all duration-200">
-                              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
-                                {comp.props.title || 'Summary Card'}
-                              </div>
-                              <div className="text-2xl font-black text-slate-900 tracking-tight mt-1">
-                                {evaluateMetricValue(comp)}
-                              </div>
-                              <div className="text-[9px] font-mono text-indigo-500 font-semibold mt-1 flex items-center gap-1 bg-indigo-50/60 px-2 py-0.5 rounded-md inline-block">
-                                <i className="fa-solid fa-calculator opacity-80"></i>
-                                <span>{comp.props.operation}({comp.props.column || 'Null Token'})</span>
-                              </div>
+                          {comp.type === 'grid-row' && (
+                            <div className="flex flex-row gap-4 w-full p-1 animate-fade-in">
+                              {comp.props.gridItems.map((item, idx) => (
+                                <div key={item.id || idx} className="flex-1 p-4 bg-slate-50/70 border border-slate-200 rounded-2xl shadow-3xs transform hover:scale-[1.01] transition-all">
+                                  <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">{item.title}</div>
+                                  <div className="text-xl font-black text-slate-900 mt-0.5">{evaluateMetricValue(item.column, item.operation)}</div>
+                                  <div className="text-[8px] font-mono text-indigo-500 font-bold mt-1 bg-indigo-50 px-1.5 py-0.5 rounded inline-block">
+                                    {item.operation}({item.column || 'Unset'})
+                                  </div>
+                                </div>
+                              ))}
                             </div>
                           )}
                         </div>
@@ -584,7 +553,7 @@ const DesignerPage = () => {
             </div>
           </div>
 
-          {/* Right Properties Control Sidebar */}
+          {/* Right Properties Management Panel */}
           <div className="w-80 bg-white border-l border-slate-200 p-6 overflow-auto shadow-xs sticky top-16 h-[calc(100vh-64px)]">
             <h3 className="font-bold text-slate-800 text-xs border-b border-slate-100 pb-3 mb-4 flex items-center gap-1.5">
               <i className="fa-solid fa-sliders text-slate-400 text-xs"></i> Property Controller
@@ -598,8 +567,8 @@ const DesignerPage = () => {
                     {selectedComponent.type === 'table' && <i className="fa-solid fa-table text-emerald-500 text-xs"></i>}
                     {selectedComponent.type === 'spacer' && <i className="fa-solid fa-arrows-left-right-to-line text-amber-500 text-xs rotate-90"></i>}
                     {selectedComponent.type === 'page-break' && <i className="fa-solid fa-scissors text-purple-500 text-xs"></i>}
-                    {selectedComponent.type === 'metric-card' && <i className="fa-solid fa-chart-pie text-indigo-500 text-xs"></i>}
-                    {selectedComponent.type === 'metric-card' ? 'Metric Card' : selectedComponent.type}
+                    {selectedComponent.type === 'grid-row' && <i className="fa-solid fa-chart-pie text-violet-500 text-xs"></i>}
+                    {selectedComponent.type === 'grid-row' ? 'Infographic Grid' : selectedComponent.type}
                   </p>
                 </div>
 
@@ -618,7 +587,7 @@ const DesignerPage = () => {
                       <select
                         value={selectedComponent.props.fontFamily || 'Arial'}
                         onChange={(e) => updateComponent(selectedComponent.id, { fontFamily: e.target.value })}
-                        className="w-full text-xs border border-slate-200 bg-slate-50 rounded-xl p-2.5 outline-none font-semibold text-slate-700 focus:bg-white focus:ring-2 focus:ring-indigo-500/10"
+                        className="w-full text-xs border border-slate-200 bg-slate-50 rounded-xl p-2.5 outline-none font-semibold text-slate-700"
                       >
                         <option value="Arial">Arial (Sans-Serif)</option>
                         <option value="Helvetica">Helvetica (Modern)</option>
@@ -653,7 +622,7 @@ const DesignerPage = () => {
                     </div>
                     <div>
                       <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Font Tint Color</label>
-                      <div className="flex items-center gap-2 border border-slate-200 bg-slate-50/40 rounded-xl p-1.5 pl-3 focus-within:ring-2 focus-within:ring-indigo-500/10 focus-within:border-indigo-400 transition-all">
+                      <div className="flex items-center gap-2 border border-slate-200 bg-slate-50/40 rounded-xl p-1.5 pl-3">
                         <input
                           type="color"
                           value={selectedComponent.props.color || '#1e293b'}
@@ -677,7 +646,7 @@ const DesignerPage = () => {
                         type="checkbox"
                         checked={selectedComponent.props.bold || false}
                         onChange={(e) => updateComponent(selectedComponent.id, { bold: e.target.checked })}
-                        className="w-3.5 h-3.5 rounded text-indigo-600 border-slate-300 bg-white shadow-3xs focus:ring-0"
+                        className="w-3.5 h-3.5 rounded text-indigo-600 border-slate-300 bg-white shadow-3xs"
                       />
                       <span className="text-xs font-medium text-slate-700">Apply Bold Weight</span>
                     </label>
@@ -718,7 +687,7 @@ const DesignerPage = () => {
                               >
                                 <span className="truncate pr-2">{col}</span>
                                 <span className="text-[10px] flex-shrink-0">
-                                  {isIncluded ? <i className="fa-solid fa-circle-check"></i> : <i className="fa-solid fa-circle-plus opacity-40 group-hover/btn:opacity-100 transition-opacity"></i>}
+                                  {isIncluded ? <i className="fa-solid fa-circle-check"></i> : <i className="fa-solid fa-circle-plus opacity-40"></i>}
                                 </span>
                               </button>
                             );
@@ -784,7 +753,6 @@ const DesignerPage = () => {
                           </div>
                         </div>
 
-                        {/* Visual Alert Swatch Palette Selectors */}
                         <div>
                           <label className="block text-[9px] text-slate-400 font-medium mb-1.5">Alert Color Variant</label>
                           <div className="grid grid-cols-2 gap-2">
@@ -884,54 +852,74 @@ const DesignerPage = () => {
                   </div>
                 )}
 
-                {selectedComponent.type === 'metric-card' && (
+                {/* FIXED: Added a custom side dashboard logic controller to configure nested Infographic Grid structures */}
+                {selectedComponent.type === 'grid-row' && (
                   <div className="space-y-4">
-                    <div>
-                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Card Header Title</label>
-                      <input
-                        type="text"
-                        value={selectedComponent.props.title}
-                        onChange={(e) => updateComponent(selectedComponent.id, { title: e.target.value })}
-                        className="w-full text-xs border border-slate-200 rounded-xl p-2.5 outline-none text-slate-700 font-semibold focus:border-indigo-400 transition-colors shadow-3xs"
-                      />
+                    <div className="border-b border-slate-100 pb-2">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Infographic Sub-Cards</label>
+                      <p className="text-[10px] text-slate-400 mt-1">Configure layout parameters for each item nested inside this tracking row grid layout container.</p>
                     </div>
 
-                    <div>
-                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Target Analytical Column</label>
-                      <select
-                        value={selectedComponent.props.column}
-                        onChange={(e) => updateComponent(selectedComponent.id, { column: e.target.value })}
-                        className="w-full text-xs border border-slate-200 bg-slate-50 rounded-xl p-2.5 outline-none font-bold text-slate-700 focus:bg-white focus:border-indigo-400 transition-colors"
-                      >
-                        {csvHeaders.length > 0 ? (
-                          csvHeaders.map(h => (
-                            <option key={h} value={h}>{h}</option>
-                          ))
-                        ) : (
-                          <option value="">(No CSV Dataset Loaded)</option>
-                        )}
-                      </select>
-                    </div>
+                    <div className="space-y-4 max-h-[450px] overflow-y-auto pr-1">
+                      {selectedComponent.props.gridItems.map((item, idx) => (
+                        <div key={item.id || idx} className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-3 shadow-3xs animate-fade-in">
+                          <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
+                            <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wide">Card Slot #{idx + 1}</span>
+                          </div>
 
-                    <div>
-                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Aggregation Operation</label>
-                      <div className="grid grid-cols-3 gap-1 bg-slate-50 border p-1 rounded-xl">
-                        {['COUNT', 'SUM', 'AVG'].map((op) => {
-                          const isActive = selectedComponent.props.operation === op;
-                          return (
-                            <button
-                              key={op}
-                              type="button"
-                              onClick={() => updateComponent(selectedComponent.id, { operation: op })}
-                              className={`py-1.5 text-[10px] rounded-lg font-bold transition-all duration-150 ${
-                                isActive ? 'bg-white text-indigo-600 shadow-3xs border border-slate-100' : 'text-slate-400 hover:text-slate-600'
-                              }`}
-                            >
-                              {op}
-                            </button>
-                          );
-                        })}
-                      </div>
+                          <div>
+                            <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Display Metric Title</label>
+                            <input
+                              type="text"
+                              value={item.title}
+                              onChange={(e) => {
+                                const copyItems = [...selectedComponent.props.gridItems];
+                                copyItems[idx] = { ...item, title: e.target.value };
+                                updateComponent(selectedComponent.id, { gridItems: copyItems });
+                              }}
+                              className="w-full text-xs border border-slate-200 rounded-lg p-2 outline-none text-slate-700 font-semibold focus:border-indigo-400"
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Target Column</label>
+                              <select
+                                value={item.column}
+                                onChange={(e) => {
+                                  const copyItems = [...selectedComponent.props.gridItems];
+                                  copyItems[idx] = { ...item, column: e.target.value };
+                                  updateComponent(selectedComponent.id, { gridItems: copyItems });
+                                }}
+                                className="w-full text-[11px] border border-slate-200 bg-white rounded-lg p-1.5 outline-none font-medium text-slate-700"
+                              >
+                                {csvHeaders.length > 0 ? (
+                                  csvHeaders.map(h => <option key={h} value={h}>{h}</option>)
+                                ) : (
+                                  <option value="">(No Data)</option>
+                                )}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Operation</label>
+                              <select
+                                value={item.operation}
+                                onChange={(e) => {
+                                  const copyItems = [...selectedComponent.props.gridItems];
+                                  copyItems[idx] = { ...item, operation: e.target.value };
+                                  updateComponent(selectedComponent.id, { gridItems: copyItems });
+                                }}
+                                className="w-full text-[11px] border border-slate-200 bg-white rounded-lg p-1.5 outline-none font-bold text-slate-700"
+                              >
+                                <option value="COUNT">COUNT</option>
+                                <option value="SUM">SUM</option>
+                                <option value="AVG">AVG</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -979,7 +967,7 @@ const DesignerPage = () => {
                 {selectedComponent.type === 'page-break' && (
                   <div className="p-3 bg-purple-50 border border-purple-100 rounded-xl text-purple-900 text-xs leading-relaxed shadow-4xs animate-fade-in">
                     <p className="font-semibold mb-1 flex items-center gap-1.5">
-                      <i className="fa-solid fa-circle-info"></i> Static Node Properties
+                      <i className="fa-solid fa-circle-info text-purple-500"></i> Static Node Properties
                     </p>
                     This is an isolated structural split node. It injects a hard page page-break break layout constraint directly into your server-side compiler pipeline config parameters.
                   </div>
