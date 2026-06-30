@@ -16,6 +16,7 @@ const DesignerPage = () => {
 
   const selectedComponent = components.find(c => c.id === selectedComponentId) || null;
 
+  // Handle CSV Upload
   const handleFileUpload = useCallback((e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -46,13 +47,21 @@ const DesignerPage = () => {
     });
   }, []);
 
+  // Add Component with Advanced Styling States
   const addComponent = useCallback((type) => {
     const currentId = nextId;
     const newComponent = {
       id: currentId,
       type: type,
       props: type === 'text'
-        ? { value: 'Double click to edit me', fontSize: 16, bold: false }
+        ? { 
+            value: 'Double click to edit me', 
+            fontSize: 16, 
+            bold: false,
+            align: 'left',
+            color: '#1e293b',
+            fontFamily: 'Arial'
+          }
         : { columns: csvHeaders.length > 0 ? csvHeaders : ['Column 1', 'Column 2', 'Column 3'] }
     };
 
@@ -104,6 +113,7 @@ const DesignerPage = () => {
     setDraggedIdx(null);
   };
 
+  // Generate HTML compilation block parsing typographic structures
   const handleGeneratePreview = useCallback(async () => {
     if (!csvData.length) {
       alert('Please upload a CSV file first.');
@@ -111,21 +121,32 @@ const DesignerPage = () => {
     }
     setIsGenerating(true);
 
-    let compiledHtml = `<div style="font-family: sans-serif; padding: 40px; max-width: 800px; margin: 0 auto;">`;
+    let compiledHtml = `<div style="padding: 40px; max-width: 800px; margin: 0 auto;">`;
     components.forEach(comp => {
       if (comp.type === 'text') {
-        compiledHtml += `<p style="font-size: ${comp.props.fontSize}px; font-weight: ${comp.props.bold ? 'bold' : 'normal'}; margin-bottom: 15px;">${comp.props.value}</p>`;
+        const styles = [
+          `font-size: ${comp.props.fontSize || 16}px`,
+          `font-weight: ${comp.props.bold ? 'bold' : 'normal'}`,
+          `text-align: ${comp.props.align || 'left'}`,
+          `color: ${comp.props.color || '#1e293b'}`,
+          `font-family: ${comp.props.fontFamily || 'Arial'}, sans-serif`,
+          `margin-bottom: 15px`,
+          `white-space: pre-wrap`,
+          `word-break: break-word`
+        ].join('; ');
+
+        compiledHtml += `<p style="${styles}">${comp.props.value}</p>`;
       } else if (comp.type === 'table') {
-        compiledHtml += `<table style="width:100%; border-collapse:collapse; margin-bottom:20px;"><thead><tr style="background:#f3f4f6;">`;
+        compiledHtml += `<table style="width:100%; border-collapse:collapse; margin-bottom:20px; font-family: sans-serif; font-size: 13px;"><thead><tr style="background:#f8fafc;">`;
         comp.props.columns.forEach(col => {
-          compiledHtml += `<th style="border:1px solid #e5e7eb; padding:8px; text-align:left;">${col}</th>`;
+          compiledHtml += `<th style="border:1px solid #e2e8f0; padding:10px; text-align:left; color:#475569; font-weight:600;">${col}</th>`;
         });
         compiledHtml += `</tr></thead><tbody>`;
 
         csvData.slice(0, 5).forEach(row => {
           compiledHtml += `<tr>`;
           comp.props.columns.forEach(col => {
-            compiledHtml += `<td style="border:1px solid #e5e7eb; padding:8px;">${row[col] || ''}</td>`;
+            compiledHtml += `<td style="border:1px solid #e2e8f0; padding:10px; color:#334155;">${row[col] || ''}</td>`;
           });
           compiledHtml += `</tr>`;
         });
@@ -308,8 +329,14 @@ const DesignerPage = () => {
                                 />
                               ) : (
                                 <div 
-                                  style={{ fontSize: `${comp.props.fontSize || 16}px`, fontWeight: comp.props.bold ? 'bold' : 'normal' }}
-                                  className="text-slate-800 break-words min-h-[22px]"
+                                  style={{ 
+                                    fontSize: `${comp.props.fontSize || 16}px`, 
+                                    fontWeight: comp.props.bold ? 'bold' : 'normal',
+                                    textAlign: comp.props.align || 'left',
+                                    color: comp.props.color || '#1e293b',
+                                    fontFamily: comp.props.fontFamily ? `${comp.props.fontFamily}, sans-serif` : 'Arial, sans-serif'
+                                  }}
+                                  className="break-words min-h-[22px]"
                                 >
                                   {comp.props.value || <span className="text-slate-300 italic font-light">Empty layout string token</span>}
                                 </div>
@@ -376,6 +403,67 @@ const DesignerPage = () => {
                         className="w-full text-xs border border-slate-200 bg-slate-50/30 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none h-20 resize-none transition-all"
                       />
                     </div>
+                    
+                    {/* Font Family Selection Dropdown */}
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Font Family</label>
+                      <select
+                        value={selectedComponent.props.fontFamily || 'Arial'}
+                        onChange={(e) => updateComponent(selectedComponent.id, { fontFamily: e.target.value })}
+                        className="w-full text-xs border border-slate-200 bg-slate-50 rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium text-slate-700"
+                      >
+                        <option value="Arial">Arial (Sans-Serif)</option>
+                        <option value="Helvetica">Helvetica (Modern)</option>
+                        <option value="Times New Roman">Times New Roman (Elegant Serif)</option>
+                        <option value="Courier New">Courier New (Monospace)</option>
+                      </select>
+                    </div>
+
+                    {/* Text Alignment Button Toggles */}
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Text Alignment</label>
+                      <div className="grid grid-cols-4 gap-1 bg-slate-50 border p-1 rounded-xl">
+                        {[
+                          { key: 'left', icon: 'fa-align-left' },
+                          { key: 'center', icon: 'fa-align-center' },
+                          { key: 'right', icon: 'fa-align-right' },
+                          { key: 'justify', icon: 'fa-align-justify' }
+                        ].map((btn) => {
+                          const isActive = (selectedComponent.props.align || 'left') === btn.key;
+                          return (
+                            <button
+                              key={btn.key}
+                              type="button"
+                              onClick={() => updateComponent(selectedComponent.id, { align: btn.key })}
+                              className={`py-1.5 rounded-lg text-xs transition-all ${
+                                isActive 
+                                  ? 'bg-white text-indigo-600 shadow-3xs font-bold border border-slate-100' 
+                                  : 'text-slate-400 hover:text-slate-600'
+                              }`}
+                            >
+                              <i className={`fa-solid ${btn.icon}`}></i>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Color Swatch Picker */}
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Font Color</label>
+                      <div className="flex items-center gap-2 border border-slate-200 bg-slate-50/30 rounded-xl p-1.5 pl-3">
+                        <input
+                          type="color"
+                          value={selectedComponent.props.color || '#1e293b'}
+                          onChange={(e) => updateComponent(selectedComponent.id, { color: e.target.value })}
+                          className="w-7 h-7 rounded-lg border border-slate-200 cursor-pointer overflow-hidden bg-transparent"
+                        />
+                        <span className="text-xs font-mono text-slate-500 uppercase tracking-wider select-text">
+                          {selectedComponent.props.color || '#1E293B'}
+                        </span>
+                      </div>
+                    </div>
+
                     <div>
                       <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Font Scale (px)</label>
                       <input
@@ -385,6 +473,7 @@ const DesignerPage = () => {
                         className="w-full text-xs border border-slate-200 bg-slate-50/30 rounded-xl p-2 focus:bg-white focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all"
                       />
                     </div>
+
                     <label className="flex items-center gap-2.5 p-2.5 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-100/50 transition-colors">
                       <input
                         type="checkbox"
