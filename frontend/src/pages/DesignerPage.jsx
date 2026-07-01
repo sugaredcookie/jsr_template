@@ -16,6 +16,28 @@ const DesignerPage = () => {
 
   const selectedComponent = components.find(c => c.id === selectedComponentId) || null;
 
+  const toggleDownload = () => {
+    if (!previewHtml) {
+      alert("Generate preview first");
+      return;
+    }
+
+    const blob = new Blob([previewHtml], {
+      type: "text/html"
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "report.html";
+
+    document.body.appendChild(link);
+    link.click();
+
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   // Helper evaluator to cross-reference dataset elements against dynamic rule parameters
   const evaluateRowHighlightStyles = useCallback((row, rule) => {
     if (!rule || !rule.column || !rule.operator || !rule.value) return {};
@@ -322,6 +344,12 @@ const DesignerPage = () => {
           >
             <i className="fa-solid fa-scissors text-rose-500 text-xs"></i>
             <span>Page Break</span>
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2 px-4 py-2 text-white rounded-xl text-xs font-semibold transform hover:-translate-y-0.5 active:translate-y-0 active:scale-98 transition-all duration-300 bg-slate-800 hover:bg-slate-950 shadow-md pointer">
+          <button onClick={toggleDownload}>
+              <p>Download</p>
           </button>
         </div>
 
