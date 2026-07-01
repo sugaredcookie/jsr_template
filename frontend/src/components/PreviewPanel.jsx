@@ -1,30 +1,20 @@
 import React from 'react';
 
-const PreviewPanel = ({ html, onBack }) => {
+const PreviewPanel = ({ html }) => {
   return (
-    <div className="flex-1 p-4">
-      <div className="bg-white rounded-lg shadow-lg h-full flex flex-col">
-        <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
-          <div className="flex items-center gap-4">
-            <h3 className="text-sm font-semibold text-gray-700">📄 Report Preview</h3>
-            <span className="text-xs text-gray-500">HTML Preview Mode</span>
-          </div>
-        </div>
-        <div className="flex-1 p-4 bg-gray-100 overflow-auto">
-          <div className="bg-white shadow-lg mx-auto" style={{ maxWidth: '1000px' }}>
-            <iframe
-              srcDoc={html}
-              title="Report Preview"
-              className="w-full"
-              style={{ 
-                height: '800px',
-                border: 'none',
-                backgroundColor: 'white'
-              }}
-              sandbox="allow-scripts allow-same-origin"
-            />
-          </div>
-        </div>
+    <div className="flex-1 bg-slate-900/[0.02] overflow-auto p-10 flex justify-center items-start animate-fade-in">
+      {/* High-fidelity Vector Report Frame */}
+      <div className="w-full max-w-5xl border border-slate-200/60 bg-white shadow-2xl rounded-2xl overflow-hidden transition-all duration-500 hover:shadow-indigo-500/[0.02]">
+        <iframe
+          srcDoc={html}
+          title="Report Schema Sandbox View"
+          className="w-full min-h-[1150px]"
+          style={{ 
+            border: 'none',
+            backgroundColor: '#ffffff'
+          }}
+          sandbox="allow-scripts allow-same-origin"
+        />
       </div>
     </div>
   );

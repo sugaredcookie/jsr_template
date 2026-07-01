@@ -112,6 +112,7 @@ const DesignerPage = () => {
       props = {};
     } else if (type === 'grid-row') {
       props = {
+        columnsCount: 2,
         gridItems: [
           { id: `metric-1-${currentId}`, title: 'Headcount Summary', column: csvHeaders[0] || '', operation: 'COUNT' },
           { id: `metric-2-${currentId}`, title: 'Performance Average', column: csvHeaders[0] || '', operation: 'AVG' }
@@ -149,7 +150,7 @@ const DesignerPage = () => {
   return (
     <div className={`flex flex-col h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-indigo-50/20 font-sans antialiased select-none text-slate-800 ${isFullscreen && isPreviewMode ? 'fixed inset-0 z-50' : ''}`}>
       
-      {/* Top Toolbar */}
+      {/* Top Toolbar Shell Hook */}
       <Topbar
         csvFileName={csvFileName}
         onFileUpload={handleFileUpload}
@@ -165,11 +166,10 @@ const DesignerPage = () => {
         isFullscreen={isFullscreen}
       />
 
-      {/* Main Content */}
+      {/* Main Framework Content Panel Area */}
       {isPreviewMode && previewHtml ? (
         <PreviewPanel 
           html={previewHtml} 
-          onBack={exitPreview}
         />
       ) : (
         <div className="flex flex-1 overflow-hidden">
