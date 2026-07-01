@@ -1,120 +1,103 @@
-import React, { useRef } from 'react';
+import React from 'react';
+import { useState } from 'react';
 
 const Topbar = ({ 
-  onFileUpload, 
-  onAddText, 
-  onAddTable, 
+  csvFileName,
+  onFileUpload,
+  onAddComponent,
   onGeneratePreview,
-  onBackToDesign,
-  csvHeaders, 
+  onExitPreview,
+  onDownloadHtml,
   isGenerating,
-  generationProgress,
-  componentsCount,
   isPreviewMode,
-  hasPreview
+  csvHeaders,
+  componentsCount
 }) => {
-  const fileInputRef = useRef(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const toggleFullscreen = () => {
+    setIsFullscreen(!isFullscreen);
+  }
 
-  const handleFileChange = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      onFileUpload(file);
-      fileInputRef.current.value = '';
-    }
-  };
-
-  const handleUploadClick = () => {
-    fileInputRef.current.click();
-  };
+  const componentButtons = [
+    { type: 'text', label: 'Text', icon: 'fa-font', color: 'text-blue-500' },
+    { type: 'table', label: 'Table', icon: 'fa-table-columns', color: 'text-emerald-500' },
+    { type: 'grid-row', label: 'Infographic Grid', icon: 'fa-chart-pie', color: 'text-violet-500' },
+    { type: 'spacer', label: 'Spacer', icon: 'fa-arrows-left-right-to-line', color: 'text-amber-500' },
+    { type: 'page-break', label: 'Page Break', icon: 'fa-scissors', color: 'text-rose-500' }
+  ];
 
   return (
-    <div className="flex flex-wrap justify-between items-center px-6 py-3 bg-white border-b border-gray-200 shadow-sm min-h-16 flex-shrink-0">
-      <div className="flex items-center">
-        <h2 className="text-xl font-semibold text-gray-900">📊 Report Designer</h2>
-        {isPreviewMode && (
-          <span className="ml-3 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-            Preview Mode
-          </span>
-        )}
+    <div className="h-16 bg-white/75 backdrop-blur-md border-b border-white/60 flex items-center px-6 gap-6 shadow-xs sticky top-0 z-50">
+      {/* Logo */}
+      <div className="flex items-center gap-2.5 flex-shrink-0 group cursor-default transition-all duration-300 hover:opacity-90">
+        <h1 className="text-md font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+          Report Designer
+        </h1>
       </div>
-      
-      <div className="flex flex-wrap gap-3 items-center">
-        {!isPreviewMode ? (
-          <>
-            <button 
-              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md font-medium transition-all hover:shadow-md disabled:bg-gray-300 disabled:cursor-not-allowed"
-              onClick={handleUploadClick}
-            >
-              📁 Upload CSV
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv"
-              onChange={handleFileChange}
-              className="hidden"
-            />
-            
-            <button 
-              className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md font-medium transition-all hover:shadow-md disabled:bg-gray-300 disabled:cursor-not-allowed"
-              onClick={onAddText}
-              disabled={!csvHeaders || csvHeaders.length === 0}
-            >
-              ➕ Add Text
-            </button>
-            
-            <button 
-              className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-md font-medium transition-all hover:shadow-md disabled:bg-gray-300 disabled:cursor-not-allowed"
-              onClick={onAddTable}
-              disabled={!csvHeaders || csvHeaders.length === 0}
-            >
-              📋 Add Table
-            </button>
 
-            <button 
-              className={`px-4 py-2 rounded-md font-medium transition-all ${
-                isGenerating 
-                  ? 'bg-gray-400 cursor-not-allowed' 
-                  : 'bg-indigo-500 hover:bg-indigo-600 text-white hover:shadow-md'
-              }`}
-              onClick={onGeneratePreview}
-              disabled={isGenerating || !csvHeaders || csvHeaders.length === 0 || componentsCount === 0}
-            >
-              {isGenerating ? '⏳ Generating...' : '👁️ Generate Preview'}
-            </button>
-          </>
-        ) : (
+      {/* Toolbar Buttons */}
+      <div className="flex items-center gap-2 mx-auto bg-slate-200/40 p-1.5 rounded-2xl border border-slate-300/20 backdrop-blur-xs">
+        {/* Upload CSV */}
+        <label className="cursor-pointer flex items-center gap-2 px-3.5 py-1.5 bg-white border border-slate-200/80 text-slate-700 rounded-xl shadow-3xs hover:bg-slate-50 hover:border-slate-300/80 text-xs font-semibold transform hover:-translate-y-0.5 active:translate-y-0 active:scale-98 transition-all duration-200">
+          <i className="fa-solid fa-cloud-arrow-up text-indigo-500 text-xs"></i>
+          <span>Upload CSV</span>
+          <input type="file" accept=".csv" className="hidden" onChange={onFileUpload} />
+        </label>
+
+        <div className="h-4 w-px bg-slate-300 mx-0.5"></div>
+
+        {/* Component Buttons */}
+        {componentButtons.map((btn) => (
           <button 
-            className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-md font-medium transition-all hover:shadow-md"
-            onClick={onBackToDesign}
+            key={btn.type}
+            onClick={() => onAddComponent(btn.type)} 
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200/80 text-slate-700 rounded-xl hover:bg-slate-50 shadow-3xs text-xs font-semibold transform hover:-translate-y-0.5 active:translate-y-0 active:scale-98 transition-all duration-200"
           >
-            ✏️ Back to Design
+            <i className={`fa-solid ${btn.icon} ${btn.color} text-xs`}></i>
+            <span>{btn.label}</span>
           </button>
-        )}
+        ))}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        {csvHeaders && csvHeaders.length > 0 && (
-          <span className="px-3 py-1.5 bg-gray-100 rounded text-sm text-gray-600">
-            {csvHeaders.length} columns
-          </span>
+      {/* Full Screen Button */}
+      {/* <div className="flex items-center gap-2 px-4 py-2 text-white rounded-xl text-xs font-semibold transform hover:-translate-y-0.5 active:translate-y-0 active:scale-98 transition-all duration-300 bg-slate-800 hover:bg-slate-950 shadow-md">
+        <button
+          onClick={toggleFullscreen}
+          className=""
+        >
+          {isFullscreen ? 'Exit Full Screen' : 'Full Screen'}
+        </button>
+      </div> */} 
+      {/* On hold */}
+
+      {/* Download Button */}
+      <button
+        onClick={onDownloadHtml}
+        className="flex items-center gap-2 px-4 py-2 text-white rounded-xl text-xs font-semibold transform hover:-translate-y-0.5 active:translate-y-0 active:scale-98 transition-all duration-300 bg-slate-800 hover:bg-slate-950 shadow-md"
+      >
+        <i className="fa-solid fa-download text-xs"></i>
+        <span>Download</span>
+      </button>
+
+      {/* Generate/Exit Preview Button */}
+      <button
+        onClick={isPreviewMode ? onExitPreview : onGeneratePreview}
+        disabled={isGenerating}
+        className={`flex items-center gap-2 px-4 py-2 text-white rounded-xl text-xs font-semibold transform hover:-translate-y-0.5 active:translate-y-0 active:scale-98 transition-all duration-300 ${
+          isPreviewMode 
+            ? 'bg-slate-800 hover:bg-slate-950 shadow-md' 
+            : 'bg-gradient-to-r from-indigo-600 to-indigo-500 hover:opacity-95 shadow-md shadow-indigo-600/10'
+        }`}
+      >
+        {isGenerating ? (
+          <i className="fa-solid fa-circle-notch animate-spin text-xs"></i>
+        ) : isPreviewMode ? (
+          <i className="fa-solid fa-circle-chevron-left text-xs"></i>
+        ) : (
+          <i className="fa-solid fa-wand-magic-sparkles text-xs"></i>
         )}
-        {componentsCount > 0 && !isPreviewMode && (
-          <span className="px-3 py-1.5 bg-gray-100 rounded text-sm text-gray-600">
-            {componentsCount} components
-          </span>
-        )}
-        {generationProgress && (
-          <span className={`px-3 py-1.5 rounded text-sm ${
-            generationProgress.status === 'success' ? 'bg-green-100 text-green-700' :
-            generationProgress.status === 'error' ? 'bg-red-100 text-red-700' :
-            generationProgress.status === 'loading' ? 'bg-blue-100 text-blue-700' :
-            'bg-gray-100 text-gray-700'
-          }`}>
-            {generationProgress.message}
-          </span>
-        )}
-      </div>
+        <span>{isPreviewMode ? 'Back to Designer' : 'Generate Preview'}</span>
+      </button>
     </div>
   );
 };

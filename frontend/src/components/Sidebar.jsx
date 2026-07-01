@@ -1,67 +1,53 @@
 import React from 'react';
 
-const Sidebar = ({ csvHeaders, components, onAddComponent }) => {
+const Sidebar = ({ csvFileName, csvHeaders, components }) => {
   return (
-    <div className="w-72 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 overflow-hidden">
-      <div className="p-4 border-b border-gray-100">
-        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
-          📋 Available CSV Fields
-        </h3>
-        <div className="max-h-48 overflow-y-auto">
-          {csvHeaders && csvHeaders.length > 0 ? (
-            csvHeaders.map((header, index) => (
-              <div key={index} className="flex justify-between items-center px-3 py-2 mb-1 rounded bg-gray-50 hover:bg-gray-100 transition-colors">
-                <span className="text-sm font-medium text-gray-700">{header}</span>
-                <span className="text-xs text-gray-400 bg-gray-200 px-2 py-0.5 rounded">string</span>
-              </div>
-            ))
-          ) : (
-            <div className="text-center py-5 text-gray-400">
-              <p className="text-sm">No CSV loaded</p>
-              <p className="text-xs mt-1 text-gray-300">Upload a CSV file to get started</p>
-            </div>
-          )}
-        </div>
+    <div className="w-72 bg-white/70 backdrop-blur-md border-r border-slate-200 flex flex-col shadow-3xs">
+      {/* Active Document */}
+      <div className="p-4 border-b border-slate-100 bg-white/40">
+        <h2 className="uppercase text-[9px] tracking-wider text-slate-400 font-bold mb-2.5 flex items-center gap-1.5">
+          <i className="fa-solid fa-file-csv opacity-70"></i> Active Document
+        </h2>
+        {csvFileName ? (
+          <div className="text-xs font-medium text-emerald-700 truncate bg-emerald-50/60 p-2.5 rounded-xl border border-emerald-100 flex items-center gap-2 animate-slide-in shadow-3xs">
+            <i className="fa-solid fa-circle-check text-emerald-500 text-xs animate-pulse"></i>
+            <span className="truncate font-medium">{csvFileName}</span>
+          </div>
+        ) : (
+          <div className="text-slate-400 text-[11px] py-4 text-center border border-dashed border-slate-200 bg-white/50 rounded-xl">
+            <i className="fa-solid fa-inbox block text-md mb-1 opacity-50 animate-bounce"></i>
+            No CSV spreadsheet loaded
+          </div>
+        )}
       </div>
 
-      <div className="p-4 border-b border-gray-100 flex-1">
-        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
-          📐 Components
-        </h3>
-        <div className="max-h-48 overflow-y-auto">
-          {components && components.length > 0 ? (
-            components.map((comp) => (
-              <div key={comp.id} className="flex items-center px-3 py-2 mb-1 rounded bg-gray-50 hover:bg-gray-100 transition-colors">
-                <span className="mr-2">{comp.type === 'text' ? '📝' : '📊'}</span>
-                <span className="text-sm text-gray-700">
-                  {comp.type === 'text' ? 'Text' : 'Table'} #{comp.id}
-                </span>
+      {/* Parser Tokens */}
+      <div className="p-4 border-b border-slate-100 flex-1 overflow-auto bg-white/20">
+        <h2 className="uppercase text-[9px] tracking-wider text-slate-400 font-bold mb-2.5 flex items-center gap-1.5">
+          <i className="fa-solid fa-database opacity-70"></i> Parser Tokens
+        </h2>
+        {csvHeaders.length > 0 ? (
+          <div className="text-sm space-y-1.5 pb-4">
+            {csvHeaders.map((h, i) => (
+              <div key={i} className="px-3 py-2 bg-white/80 hover:bg-white rounded-xl text-slate-600 border border-slate-200/50 text-xs font-mono flex items-center gap-2 shadow-4xs hover:shadow-3xs hover:scale-101 transition-all cursor-default duration-150">
+                <i className="fa-solid fa-tag text-indigo-400 text-[10px]"></i>
+                <span className="truncate font-medium">{h}</span>
               </div>
-            ))
-          ) : (
-            <div className="text-center py-5 text-gray-400">
-              <p className="text-sm">No components added</p>
-              <p className="text-xs mt-1 text-gray-300">Add components from the top bar</p>
-            </div>
-          )}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-slate-400 text-[11px] py-8 text-center border border-dashed border-slate-200 bg-white/50 rounded-xl">
+            Upload dataset to fetch layout variables
+          </div>
+        )}
       </div>
 
-      <div className="p-4 mt-auto border-t border-gray-100">
-        <button 
-          className="w-full px-4 py-2.5 mb-2 border border-gray-300 rounded-md bg-white text-gray-700 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          onClick={() => onAddComponent('text')}
-          disabled={!csvHeaders || csvHeaders.length === 0}
-        >
-          ➕ Add Text
-        </button>
-        <button 
-          className="w-full px-4 py-2.5 border border-gray-300 rounded-md bg-white text-gray-700 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          onClick={() => onAddComponent('table')}
-          disabled={!csvHeaders || csvHeaders.length === 0}
-        >
-          📊 Add Table
-        </button>
+      {/* Component Count */}
+      <div className="p-4 border-t border-slate-100 bg-white/40">
+        <div className="text-xs text-slate-500 flex items-center gap-2">
+          <i className="fa-solid fa-layer-group text-slate-400"></i>
+          <span>{components.length} component{components.length !== 1 ? 's' : ''} on canvas</span>
+        </div>
       </div>
     </div>
   );

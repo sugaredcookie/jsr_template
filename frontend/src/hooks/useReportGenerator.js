@@ -1,85 +1,55 @@
 import { useState, useCallback } from 'react';
-import apiService from '../services/apiService';
+import { buildPreviewHtml } from '../utils/htmlBuilder';
 
-export const useReportGenerator = () => {
+export const useReportGenerator = (csvData, components) => {
   const [isGenerating, setIsGenerating] = useState(false);
-  const [progress, setProgress] = useState(null);
-  const [error, setError] = useState(null);
-  const [result, setResult] = useState(null);
+  const [previewHtml, setPreviewHtml] = useState(null);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
 
-  const generateReport = useCallback(async (csvFile, templateJson) => {
-    setIsGenerating(true);
-    setError(null);
-    setProgress({
-      status: 'loading',
-      message: '🔄 Validating inputs...'
-    });
-
-    try {
-      // Validate
-      if (!csvFile) {
-        throw new Error('Please upload a CSV file');
-      }
-
-      if (!templateJson || templateJson.components.length === 0) {
-        throw new Error('Please add at least one component to the report');
-      }
-
-      // Check tables have columns
-      const tablesWithoutColumns = templateJson.components
-        .filter(c => c.type === 'table')
-        .filter(c => !c.props.columns || c.props.columns.length === 0);
-
-      if (tablesWithoutColumns.length > 0) {
-        throw new Error(`Table component ${tablesWithoutColumns[0].id} has no columns selected`);
-      }
-
-      setProgress({
-        status: 'loading',
-        message: '🔄 Uploading data and generating report...'
-      });
-
-      // Generate report
-      const result = await apiService.generateReport(csvFile, templateJson);
-      
-      setProgress({
-        status: 'success',
-        message: `✅ Report generated successfully! ${result.rowCount} rows processed`
-      });
-      
-      setResult(result);
-      
-      // Auto-download
-      setTimeout(() => {
-        apiService.downloadReport(result.downloadUrl, `report-${result.reportId}.pdf`);
-      }, 500);
-
-      return result;
-    } catch (error) {
-      setError(error.message);
-      setProgress({
-        status: 'error',
-        message: `❌ ${error.message}`
-      });
-      throw error;
-    } finally {
-      setIsGenerating(false);
+  const generatePreview = useCallback(async () => {
+    if (!csvData.length) {
+      alert('Please upload a CSV file first.');
+      return;
     }
+    
+    setIsGenerating(true);
+
+    // Simulate async generation with delay
+    setTimeout(() => {
+      const compiledHtml = buildPreviewHtml(components, csvData);
+      setPreviewHtml(compiledHtml);
+      setIsPreviewMode(true);
+      setIsGenerating(false);
+    }, 800);
+  }, [csvData, components]);
+
+  const exitPreview = useCallback(() => {
+    setIsPreviewMode(false);
   }, []);
 
-  const reset = useCallback(() => {
-    setProgress(null);
-    setError(null);
-    setResult(null);
-    setIsGenerating(false);
-  }, []);
+  const downloadHtml = useCallback(() => {
+    if (!previewHtml) {
+      alert("Generate preview first");
+      return;
+    }
+
+    const blob = new Blob([previewHtml], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "report.html";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [previewHtml]);
 
   return {
-    generateReport,
     isGenerating,
-    progress,
-    error,
-    result,
-    reset
+    previewHtml,
+    isPreviewMode,
+    generatePreview,
+    exitPreview,
+    downloadHtml
   };
 };
