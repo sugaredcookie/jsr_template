@@ -105,9 +105,19 @@ class ApiService {
   // === TEMPLATE ENDPOINTS ===
 
   async getTemplates(projectId) {
-    const response = await fetch(`${this.baseUrl}/projects/${projectId}/templates`);
-    if (!response.ok) throw new Error('Failed to fetch templates');
-    return response.json();
+    try {
+      const response = await fetch(`${this.baseUrl}/projects/${projectId}/templates`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          return []; // Return empty array for 404
+        }
+        throw new Error('Failed to fetch templates');
+      }
+      return response.json();
+    } catch (error) {
+      console.warn('Templates not available:', error);
+      return []; // Always return empty array on error
+    }
   }
 
   async createTemplate(projectId, templateData) {
