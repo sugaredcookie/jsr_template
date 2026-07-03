@@ -108,15 +108,9 @@ const buildTextComponent = (comp, cfg) => {
  */
 const buildTableComponent = (comp, csvData, cfg) => {
   const { columns = [], columnMetadata = {}, repeatHeaderOnPageBreak = false } = comp.props;
-  
-  // Filter out columns explicitly flagged as hidden from the compilation stream
   const visibleColumns = columns.filter(col => !columnMetadata[col]?.hidden);
 
-  // If repeat headers is flagged, inject layout rules to handle hard printing splits cleanly
-  const tableStyles = repeatHeaderOnPageBreak 
-    ? `width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; table-layout: fixed; min-width: 650px; font-family: ${cfg.fontFamily};`
-    : `width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; table-layout: fixed; min-width: 650px; font-family: ${cfg.fontFamily};`;
-
+  const tableStyles = `width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; table-layout: auto; min-width: 100%; font-family: ${cfg.fontFamily};`;
   const theadStyles = repeatHeaderOnPageBreak ? `display: table-header-group; background: ${cfg.tableHeaderBg}; border-bottom: ${cfg.borderStyle};` : `background: ${cfg.tableHeaderBg}; border-bottom: ${cfg.borderStyle};`;
   const trPrintStyles = repeatHeaderOnPageBreak ? `page-break-inside: avoid; break-inside: avoid;` : '';
 
@@ -127,7 +121,7 @@ const buildTableComponent = (comp, csvData, cfg) => {
   visibleColumns.forEach(col => {
     const meta = columnMetadata[col] || { label: col, align: 'left', width: '' };
     const thWidth = meta.width ? `width: ${meta.width}%;` : '';
-    html += `<th style="padding: 12px 14px; text-align: ${meta.align}; color: ${cfg.headingColor}; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; ${thWidth} overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${meta.label || col}</th>`;
+    html += `<th style="padding: 12px 14px; text-align: ${meta.align}; color: ${cfg.headingColor}; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; ${thWidth} word-break: break-word; white-space: normal;">${meta.label || col}</th>`;
   });
   
   html += `</tr></thead><tbody style="background: #ffffff;">`;
@@ -142,7 +136,7 @@ const buildTableComponent = (comp, csvData, cfg) => {
     html += `<tr style="background-color: ${trBg}; color: ${trColor}; ${rowBorder} ${trPrintStyles}">`;
     visibleColumns.forEach(col => {
       const meta = columnMetadata[col] || { align: 'left' };
-      html += `<td style="padding: 12px 14px; text-align: ${meta.align}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.4;">${row[col] !== undefined ? row[col] : '—'}</td>`;
+      html += `<td style="padding: 12px 14px; text-align: ${meta.align}; word-break: break-word; white-space: normal; line-height: 1.5; vertical-align: top;">${row[col] !== undefined ? row[col] : '—'}</td>`;
     });
     html += `</tr>`;
   });
@@ -237,7 +231,6 @@ const buildChartComponent = (comp, csvData, cfg) => {
   
   const canvasId = `render-canvas-target-${comp.id}`;
   const { labels, data } = transformDataForChart(csvData, xAxisColumn, yAxisColumn, operation);
-
   const chartColors = chartType === 'pie' ? cfg.chartPieColors : cfg.chartBarBg;
 
   return `
@@ -268,6 +261,7 @@ const buildChartComponent = (comp, csvData, cfg) => {
             options: {
               responsive: true,
               maintainAspectRatio: false,
+              animation: { duration: 0 }, // 👈 FIXED: Bypasses animation frames to ensure instant vector rendering for headless HTML canvas printing
               plugins: {
                 legend: { display: ${chartType === 'pie'}, position: 'bottom', labels: { boxWidth: 12, font: { size: 11, family: "${cfg.fontFamily}" } } }
               },

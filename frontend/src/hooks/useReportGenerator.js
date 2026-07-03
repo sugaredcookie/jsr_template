@@ -8,6 +8,13 @@ export const useReportGenerator = (csvData, components, currentTheme) => {
   const [previewHtml, setPreviewHtml] = useState(null);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
 
+  // Helper utility to construct polished corporate download strings
+  const getProfessionalFilename = useCallback((extension) => {
+    const timestamp = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+    const themeLabel = currentTheme.charAt(0).toUpperCase() + currentTheme.slice(1);
+    return `Executive_Report_${themeLabel}_${timestamp}.${extension}`;
+  }, [currentTheme]);
+
   const generatePreview = useCallback(async () => {
     if (!csvData.length) {
       alert('Please upload a CSV file first.');
@@ -39,46 +46,54 @@ export const useReportGenerator = (csvData, components, currentTheme) => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `report-${currentTheme}.html`;
+    link.download = getProfessionalFilename('html');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, [previewHtml, currentTheme]);
+  }, [previewHtml, getProfessionalFilename]);
 
-  // Format 2: Traditional html2pdf Rendering Engine Pipeline
+  // Format 2: Fixed html2pdf Rendering Engine Pipeline capturing iframe DOM streams
   const downloadPdf = useCallback(() => {
     if (!previewHtml) {
       alert("Generate preview first");
       return;
     }
 
-    // Create a sandbox wrapper element to cleanly mount our compiled markup string
-    const element = document.createElement('div');
-    element.innerHTML = previewHtml;
-    document.body.appendChild(element);
+    // 1. Locate the sandboxed iframe element channel from the active viewport tree
+    const iframeTarget = document.getElementById('report-preview-iframe');
+    
+    // 2. FIXED: Drill into its internal document content window body segment
+    // This allows html2canvas to scrape layout vectors and painted charts directly from the active viewport.
+    const targetElement = iframeTarget?.contentWindow?.document?.body;
+
+    if (!targetElement) {
+      alert("Render pipeline synchronization exception: Could not capture active document frame context.");
+      return;
+    }
 
     const options = {
-      margin:       10,
-      filename:     `compiled-report-${currentTheme}.pdf`,
+      margin:       12,
+      filename:     getProfessionalFilename('pdf'),
       image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, useCORS: true, logging: false },
+      html2canvas:  { 
+        scale: 2, 
+        useCORS: true, 
+        logging: false,
+        letterRendering: true
+      },
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    // Execute the runner and cleanly tear down the temporary element node afterward
+    // 3. Fire compiler directly on the isolated internal iframe graphics stream
     html2pdf()
-      .from(element)
+      .from(targetElement)
       .set(options)
       .save()
-      .then(() => {
-        document.body.removeChild(element);
-      })
       .catch((err) => {
         console.error("PDF generation pipeline encountered an error:", err);
-        document.body.removeChild(element);
       });
-  }, [previewHtml, currentTheme]);
+  }, [previewHtml, getProfessionalFilename]);
 
   // Format 3: Zero-Dependency Native Excel Workbook Matrix Compilation
   const downloadXlsx = useCallback(() => {
@@ -87,29 +102,24 @@ export const useReportGenerator = (csvData, components, currentTheme) => {
       return;
     }
 
-    // Identify if there is an active table layout component to respect user visibility filters
     const tableComponent = components.find(c => c.type === 'table');
     let targetHeaders = Object.keys(csvData[0]);
 
     if (tableComponent && tableComponent.props?.columns) {
       const { columns, columnMetadata = {} } = tableComponent.props;
-      // Filter down to visibility-approved columns matching your Canvas rules
       targetHeaders = columns.filter(col => !columnMetadata[col]?.hidden);
     }
 
-    // Construct a standard, type-safe clean Tab-Separated Values string payload stream
     const headerRowStr = targetHeaders.join('\t');
     const dataRowsStr = csvData.map(row => {
       return targetHeaders.map(header => {
         const value = row[header] !== undefined && row[header] !== null ? row[header] : '';
-        // Sanitize inner tabs/breaks to safeguard spreadsheet line geometry records
         return String(value).replace(/\t/g, ' ').replace(/\r?\n/g, ' ');
       }).join('\t');
     }).join('\n');
 
     const totalWorkbookContent = `${headerRowStr}\n${dataRowsStr}`;
 
-    // Wrap with the formal UTF-16/Excel-friendly application/vnd.ms-excel blob signature
     const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), totalWorkbookContent], {
       type: 'application/vnd.ms-excel;charset=utf-8;'
     });
@@ -117,12 +127,12 @@ export const useReportGenerator = (csvData, components, currentTheme) => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `report_dataset.xls`; // Native .xls format allows Excel to map vectors instantly
+    link.download = getProfessionalFilename('xls');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, [csvData, components]);
+  }, [csvData, components, getProfessionalFilename]);
 
   return {
     isGenerating,
@@ -131,7 +141,7 @@ export const useReportGenerator = (csvData, components, currentTheme) => {
     generatePreview,
     exitPreview,
     downloadHtml,
-    downloadPdf, // 👈 Exported clean PDF download stream driver
-    downloadXlsx // 👈 Exported clean spreadsheet data driver
+    downloadPdf,
+    downloadXlsx
   };
 };

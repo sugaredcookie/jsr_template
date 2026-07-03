@@ -6,6 +6,7 @@ const PreviewPanel = ({ html }) => {
       {/* High-fidelity Vector Report Frame */}
       <div className="w-full max-w-5xl border border-slate-200/60 bg-white shadow-2xl rounded-2xl overflow-hidden transition-all duration-500 hover:shadow-indigo-500/[0.02]">
         <iframe
+          id="report-preview-iframe" // ADDED: Explicit target ID selector anchor
           srcDoc={html}
           title="Report Schema Sandbox View"
           className="w-full min-h-[1150px]"
