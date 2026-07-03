@@ -19,6 +19,7 @@ export const ProjectProvider = ({ children }) => {
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [hasDatasource, setHasDatasource] = useState(false);
 
   useEffect(() => {
     loadProjects();
@@ -40,16 +41,39 @@ export const ProjectProvider = ({ children }) => {
   const selectProject = async (projectId) => {
     setLoading(true);
     try {
+      // Get project details
       const project = await apiService.getProject(projectId);
       setCurrentProject(project);
 
-      const dataResponse = await apiService.getProjectData(projectId);
-      const data = dataResponse.data || [];
-      setCurrentData(data);
-      setCurrentHeaders(data.length > 0 ? Object.keys(data[0]) : []);
+      // Check datasource status first
+      try {
+        const status = await apiService.getDatasourceStatus(projectId);
+        setHasDatasource(status.configured);
+        
+        // Only fetch data if datasource is configured
+        if (status.configured) {
+          const dataResponse = await apiService.getProjectData(projectId);
+          const data = dataResponse.data || [];
+          setCurrentData(data);
+          setCurrentHeaders(data.length > 0 ? Object.keys(data[0]) : []);
+        } else {
+          setCurrentData([]);
+          setCurrentHeaders([]);
+        }
+      } catch (err) {
+        console.warn('Failed to get datasource status:', err);
+        setHasDatasource(false);
+        setCurrentData([]);
+        setCurrentHeaders([]);
+      }
 
-      const templatesData = await apiService.getTemplates(projectId);
-      setTemplates(templatesData);
+      // Get templates
+      try {
+        const templatesData = await apiService.getTemplates(projectId);
+        setTemplates(templatesData);
+      } catch (err) {
+        setTemplates([]);
+      }
 
       setError(null);
       return project;
@@ -85,6 +109,7 @@ export const ProjectProvider = ({ children }) => {
         setCurrentProject(null);
         setCurrentData([]);
         setCurrentHeaders([]);
+        setHasDatasource(false);
       }
       setError(null);
     } catch (err) {
@@ -101,6 +126,9 @@ export const ProjectProvider = ({ children }) => {
     setLoading(true);
     try {
       const result = await apiService.uploadCSV(currentProject.id, file);
+      setHasDatasource(true);
+      
+      // Refresh data after upload
       const dataResponse = await apiService.getProjectData(currentProject.id, true);
       const data = dataResponse.data || [];
       setCurrentData(data);
@@ -120,12 +148,14 @@ export const ProjectProvider = ({ children }) => {
     
     setLoading(true);
     try {
-      const dataResponse = await apiService.getProjectData(currentProject.id, true);
-      const data = dataResponse.data || [];
-      setCurrentData(data);
-      setCurrentHeaders(data.length > 0 ? Object.keys(data[0]) : []);
+      if (hasDatasource) {
+        const dataResponse = await apiService.getProjectData(currentProject.id, true);
+        const data = dataResponse.data || [];
+        setCurrentData(data);
+        setCurrentHeaders(data.length > 0 ? Object.keys(data[0]) : []);
+      }
       setError(null);
-      return data;
+      return currentData;
     } catch (err) {
       setError(err.message);
       throw err;
@@ -173,6 +203,23 @@ export const ProjectProvider = ({ children }) => {
     }
   };
 
+  const configureDatasource = async (type, config) => {
+    if (!currentProject) throw new Error('No project selected');
+    
+    setLoading(true);
+    try {
+      const result = await apiService.updateDatasourceConfig(currentProject.id, { type, config });
+      setHasDatasource(true);
+      setError(null);
+      return result;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const value = {
     projects,
     currentProject,
@@ -181,6 +228,7 @@ export const ProjectProvider = ({ children }) => {
     templates,
     loading,
     error,
+    hasDatasource,
     loadProjects,
     selectProject,
     createProject,
@@ -189,6 +237,7 @@ export const ProjectProvider = ({ children }) => {
     refreshData,
     saveTemplate,
     generateReport,
+    configureDatasource,
     setCurrentProject,
   };
 

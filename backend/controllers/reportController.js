@@ -17,24 +17,32 @@ class ReportController {
                 return res.status(400).json({ error: 'Template is required' });
             }
             
-            // Get project data using datasource service
-            const data = await datasourceService.getParsedData(projectId);
+            // Check if datasource is configured
+            const hasDatasource = await datasourceService.hasDatasource(projectId);
+            
+            let data = [];
+            if (hasDatasource) {
+                data = await datasourceService.getParsedData(projectId);
+            }
             
             // Build HTML using template builder
             const html = templateBuilder.buildTemplate(template, data);
             
             res.json({
                 success: true,
-                html
+                html,
+                hasData: data.length > 0,
+                dataCount: data.length
             });
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            console.error('Preview report error:', error);
+            res.status(500).json({ 
+                error: 'Failed to preview report',
+                message: error.message 
+            });
         }
     }
 
-    /**
-     * Generate HTML report
-     */
     async generateHTML(req, res) {
         try {
             const { projectId, template } = req.body;
@@ -47,10 +55,13 @@ class ReportController {
                 return res.status(400).json({ error: 'Template is required' });
             }
             
-            // Get project data using datasource service
-            const data = await datasourceService.getParsedData(projectId);
+            const hasDatasource = await datasourceService.hasDatasource(projectId);
             
-            // Build HTML
+            let data = [];
+            if (hasDatasource) {
+                data = await datasourceService.getParsedData(projectId);
+            }
+            
             const html = templateBuilder.buildTemplate(template, data);
             
             // Save HTML report to project storage
@@ -71,16 +82,19 @@ class ReportController {
             res.json({
                 success: true,
                 html,
-                reportPath: `/storage/projects/${projectId}/reports/${reportName}`
+                reportPath: `/storage/projects/${projectId}/reports/${reportName}`,
+                hasData: data.length > 0,
+                dataCount: data.length
             });
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            console.error('Generate HTML error:', error);
+            res.status(500).json({ 
+                error: 'Failed to generate HTML',
+                message: error.message 
+            });
         }
     }
 
-    /**
-     * Generate PDF report using JSReport
-     */
     async generatePDF(req, res) {
         try {
             const { projectId, template, options = {} } = req.body;
@@ -93,10 +107,13 @@ class ReportController {
                 return res.status(400).json({ error: 'Template is required' });
             }
             
-            // Get project data using datasource service
-            const data = await datasourceService.getParsedData(projectId);
+            const hasDatasource = await datasourceService.hasDatasource(projectId);
             
-            // Build HTML
+            let data = [];
+            if (hasDatasource) {
+                data = await datasourceService.getParsedData(projectId);
+            }
+            
             const html = templateBuilder.buildTemplate(template, data);
             
             // Generate PDF using JSReport
@@ -117,20 +134,22 @@ class ReportController {
             await fs.mkdir(path.dirname(reportPath), { recursive: true });
             await fs.writeFile(reportPath, pdfBuffer);
             
-            // Return PDF as base64 or buffer
             res.json({
                 success: true,
                 pdf: pdfBuffer.toString('base64'),
-                reportPath: `/storage/projects/${projectId}/reports/${reportName}`
+                reportPath: `/storage/projects/${projectId}/reports/${reportName}`,
+                hasData: data.length > 0,
+                dataCount: data.length
             });
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            console.error('Generate PDF error:', error);
+            res.status(500).json({ 
+                error: 'Failed to generate PDF',
+                message: error.message 
+            });
         }
     }
 
-    /**
-     * Get all reports for a project
-     */
     async getReports(req, res) {
         try {
             const { projectId } = req.params;
@@ -161,7 +180,11 @@ class ReportController {
             
             res.json(reports);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            console.error('Get reports error:', error);
+            res.status(500).json({ 
+                error: 'Failed to get reports',
+                message: error.message 
+            });
         }
     }
 }

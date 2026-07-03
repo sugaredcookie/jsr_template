@@ -5,149 +5,150 @@ const csvService = require('./csvService');
 class DatasourceService {
     constructor() {
         this.storagePath = path.join(__dirname, '..', 'storage', 'projects');
+        this._cache = new Map();
     }
 
-    /**
-     * @param {string} projectId - Project identifier
-     * @param {object} options - Additional options for data fetching
-     * @returns {Promise<Array>} - Parsed data
-     */
-    async getData(projectId, options = {}) {
-        try {
-            const datasourceConfig = await this.getDatasourceConfig(projectId);
-            switch (datasourceConfig.type) {
-                case 'csv':
-                    return await this.fetchFromCSV(projectId, datasourceConfig, options);
-                case 'aws-s3':
-                    return await this.fetchFromS3(projectId, datasourceConfig, options);
-                case 'database':
-                    return await this.fetchFromDatabase(projectId, datasourceConfig, options);
-                case 'api':
-                    return await this.fetchFromAPI(projectId, datasourceConfig, options);
-                default:
-                    throw new Error(`Unsupported datasource type: ${datasourceConfig.type}`);
-            }
-        } catch (error) {
-            throw new Error(`Failed to fetch data for project ${projectId}: ${error.message}`);
-        }
-    }
-
-    /**
-     * Get datasource configuration for a project
-     * @param {string} projectId 
-     * @returns {Promise<object>}
-     */
     async getDatasourceConfig(projectId) {
         const configPath = path.join(this.storagePath, projectId, 'datasource.json');
         try {
             const configContent = await fs.readFile(configPath, 'utf8');
-            return JSON.parse(configContent);
+            const config = JSON.parse(configContent);
+            
+            return {
+                configured: config.configured || false,
+                type: config.type || null,
+                config: config.config || {},
+                ...config
+            };
         } catch (error) {
-            // If datasource.json doesn't exist, create default
             const defaultConfig = {
-                type: 'csv',
-                path: 'employees.csv'
+                configured: false,
+                type: null,
+                config: {}
             };
             await this.saveDatasourceConfig(projectId, defaultConfig);
             return defaultConfig;
         }
     }
 
-    /**
-     * Save datasource configuration for a project
-     * @param {string} projectId 
-     * @param {object} config 
-     */
     async saveDatasourceConfig(projectId, config) {
         const projectPath = path.join(this.storagePath, projectId);
         await fs.mkdir(projectPath, { recursive: true });
         const configPath = path.join(projectPath, 'datasource.json');
         await fs.writeFile(configPath, JSON.stringify(config, null, 2));
+        this.clearCache(projectId);
     }
 
-    /**
-     * Fetch data from CSV source
-     * @private
-     */
-    async fetchFromCSV(projectId, config, options) {
-        const filePath = path.join(this.storagePath, projectId, config.path);
+    async getData(projectId, options = {}) {
         try {
-            const csvData = await fs.readFile(filePath, 'utf8');
-            return csvService.parseCSV(csvData);
-        } catch (error) {
-            // Fallback to old uploads folder for backward compatibility
-            const legacyPath = path.join(__dirname, '..', 'uploads', config.path);
-            try {
-                const csvData = await fs.readFile(legacyPath, 'utf8');
-                return csvService.parseCSV(csvData);
-            } catch (legacyError) {
-                throw new Error(`CSV file not found: ${config.path}`);
+            const config = await this.getDatasourceConfig(projectId);
+            
+            if (!config.configured) {
+                return [];
             }
+
+            switch (config.type) {
+                case 'csv':
+                    return await this.fetchFromCSV(projectId, config, options);
+                case 'local':
+                    return await this.fetchFromLocal(projectId, config, options);
+                case 'aws-s3':
+                    return await this.fetchFromS3(projectId, config, options);
+                case 'database':
+                    return await this.fetchFromDatabase(projectId, config, options);
+                case 'api':
+                    return await this.fetchFromAPI(projectId, config, options);
+                default:
+                    console.warn(`Unsupported datasource type: ${config.type}`);
+                    return [];
+            }
+        } catch (error) {
+            console.error(`Failed to fetch data for project ${projectId}:`, error);
+            return [];
         }
     }
 
-    /**
-     * Fetch data from AWS S3
-     * @private
-     */
+    async fetchFromCSV(projectId, config, options) {
+        const filePath = path.join(this.storagePath, projectId, config.config.path);
+        try {
+            // Read the file content as a string
+            const csvData = await fs.readFile(filePath, 'utf8');
+            // Pass the string to csvService.parseCSV
+            return csvService.parseCSV(csvData);
+        } catch (error) {
+            console.error(`CSV file not found: ${filePath}`, error);
+            return [];
+        }
+    }
+
+    async fetchFromLocal(projectId, config, options) {
+        console.log(`Local datasource configured for project ${projectId}:`, config.config.path);
+        // For local, we might want to read the file from the local path
+        try {
+            const localPath = config.config.path;
+            if (localPath && localPath.endsWith('.csv')) {
+                const csvData = await fs.readFile(localPath, 'utf8');
+                return csvService.parseCSV(csvData);
+            }
+            return [];
+        } catch (error) {
+            console.error(`Failed to read local file: ${config.config.path}`, error);
+            return [];
+        }
+    }
+
     async fetchFromS3(projectId, config, options) {
-        // Placeholder for AWS S3 integration
-        // Will be implemented when AWS SDK is added
+        console.log(`AWS S3 datasource configured for project ${projectId}`);
         throw new Error('AWS S3 datasource is not yet implemented');
     }
 
-    /**
-     * Fetch data from Database
-     * @private
-     */
     async fetchFromDatabase(projectId, config, options) {
-        // Placeholder for Database integration
-        // Will be implemented when database ORM is added
+        console.log(`Database datasource configured for project ${projectId}`);
         throw new Error('Database datasource is not yet implemented');
     }
 
-    /**
-     * Fetch data from REST API
-     * @private
-     */
     async fetchFromAPI(projectId, config, options) {
-        // Placeholder for API integration
-        // Will be implemented when axios is added
+        console.log(`API datasource configured for project ${projectId}`);
         throw new Error('API datasource is not yet implemented');
     }
 
-    /**
-     * Upload CSV file for a project
-     * @param {string} projectId 
-     * @param {string} filename - Original filename
-     * @param {Buffer} fileBuffer - File data
-     */
     async uploadCSV(projectId, filename, fileBuffer) {
         const projectPath = path.join(this.storagePath, projectId);
         await fs.mkdir(projectPath, { recursive: true });
         
+        // Ensure filename has .csv extension
+        if (!filename.toLowerCase().endsWith('.csv')) {
+            filename = filename + '.csv';
+        }
+        
         const filePath = path.join(projectPath, filename);
         await fs.writeFile(filePath, fileBuffer);
         
-        // Update datasource.json
-        const config = await this.getDatasourceConfig(projectId);
-        config.type = 'csv';
-        config.path = filename;
+        const config = {
+            configured: true,
+            type: 'csv',
+            config: {
+                path: filename
+            }
+        };
         await this.saveDatasourceConfig(projectId, config);
         
         return { success: true, filename, path: filePath };
     }
 
-    /**
-     * Get parsed data with caching support
-     * @param {string} projectId 
-     * @param {boolean} forceFresh - Force refresh cache
-     * @returns {Promise<Array>}
-     */
+    async configureLocal(projectId, localPath) {
+        const config = {
+            configured: true,
+            type: 'local',
+            config: {
+                path: localPath
+            }
+        };
+        await this.saveDatasourceConfig(projectId, config);
+        return config;
+    }
+
     async getParsedData(projectId, forceFresh = false) {
-        // Simple cache implementation
-        if (!this._cache) this._cache = new Map();
-        
         const cacheKey = `data_${projectId}`;
         if (!forceFresh && this._cache.has(cacheKey)) {
             return this._cache.get(cacheKey);
@@ -158,15 +159,22 @@ class DatasourceService {
         return data;
     }
 
-    /**
-     * Clear cache for a project
-     * @param {string} projectId 
-     */
     clearCache(projectId) {
-        if (this._cache) {
-            const cacheKey = `data_${projectId}`;
-            this._cache.delete(cacheKey);
-        }
+        const cacheKey = `data_${projectId}`;
+        this._cache.delete(cacheKey);
+    }
+
+    async hasDatasource(projectId) {
+        const config = await this.getDatasourceConfig(projectId);
+        return config.configured === true;
+    }
+
+    async getDatasourceInfo(projectId) {
+        const config = await this.getDatasourceConfig(projectId);
+        return {
+            configured: config.configured,
+            type: config.type || null,
+        };
     }
 }
 

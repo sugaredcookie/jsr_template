@@ -1,10 +1,23 @@
 const fs = require('fs').promises;
 const path = require('path');
-const { v4: uuidv4 } = require('uuid');
 
 class ProjectController {
-    constructor() {
-        this.storagePath = path.join(__dirname, '..', 'storage', 'projects');
+    constructor() { this.storagePath = path.join(__dirname, '..', 'storage', 'projects'); 
+        this.createProject = this.createProject.bind(this); 
+        this.getAllProjects = this.getAllProjects.bind(this); 
+        this.getProject = this.getProject.bind(this); this.updateProject = this.updateProject.bind(this); 
+        this.deleteProject = this.deleteProject.bind(this); 
+
+        this.ensureStorageDirectory();
+    }
+
+    async ensureStorageDirectory() {
+        try {
+            await fs.mkdir(this.storagePath, { recursive: true });
+            console.log(`✅ Storage directory ready: ${this.storagePath}`);
+        } catch (error) {
+            console.error('❌ Failed to create storage directory:', error);
+        }
     }
     
     async createProject(req, res) {
@@ -45,28 +58,38 @@ class ProjectController {
                 JSON.stringify(projectData, null, 2)
             );
 
-            // Create default datasource.json
-            const defaultDatasource = {
-                type: 'csv',
-                path: 'employees.csv'
+            // Create empty datasource.json (no datasource configured)
+            const emptyDatasource = {
+                configured: false,
+                type: null,
+                config: {}
             };
             await fs.writeFile(
                 path.join(projectPath, 'datasource.json'),
-                JSON.stringify(defaultDatasource, null, 2)
+                JSON.stringify(emptyDatasource, null, 2)
             );
 
             res.status(201).json(projectData);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            console.error('❌ Create project error:', error);
+            res.status(500).json({ 
+                error: 'Failed to create project',
+                message: error.message 
+            });
         }
     }
 
-    /**
-     * Get all projects
-     */
     async getAllProjects(req, res) {
         try {
             const projects = [];
+            
+            try {
+                await fs.access(this.storagePath);
+            } catch (error) {
+                await fs.mkdir(this.storagePath, { recursive: true });
+                return res.json([]);
+            }
+            
             const projectDirs = await fs.readdir(this.storagePath);
             
             for (const projectId of projectDirs) {
@@ -82,7 +105,6 @@ class ProjectController {
                             projects.push(project);
                         } catch (error) {
                             // Skip projects without valid project.json
-                            console.warn(`Project ${projectId} has no valid project.json`);
                         }
                     }
                 } catch (error) {
@@ -92,13 +114,14 @@ class ProjectController {
             
             res.json(projects);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            console.error('❌ Get all projects error:', error);
+            res.status(500).json({ 
+                error: 'Failed to get projects',
+                message: error.message 
+            });
         }
     }
 
-    /**
-     * Get a specific project
-     */
     async getProject(req, res) {
         try {
             const { projectId } = req.params;
@@ -110,13 +133,14 @@ class ProjectController {
             
             res.json(project);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            console.error('❌ Get project error:', error);
+            res.status(500).json({ 
+                error: 'Failed to get project',
+                message: error.message 
+            });
         }
     }
 
-    /**
-     * Update project details
-     */
     async updateProject(req, res) {
         try {
             const { projectId } = req.params;
@@ -131,27 +155,25 @@ class ProjectController {
                 return res.status(404).json({ error: 'Project not found' });
             }
             
-            // Read existing project data
             const content = await fs.readFile(projectFile, 'utf8');
             const project = JSON.parse(content);
             
-            // Update fields
             if (name) project.name = name;
             if (description !== undefined) project.description = description;
             project.updatedAt = new Date().toISOString();
             
-            // Save updated project
             await fs.writeFile(projectFile, JSON.stringify(project, null, 2));
             
             res.json(project);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            console.error('❌ Update project error:', error);
+            res.status(500).json({ 
+                error: 'Failed to update project',
+                message: error.message 
+            });
         }
     }
 
-    /**
-     * Delete a project
-     */
     async deleteProject(req, res) {
         try {
             const { projectId } = req.params;
@@ -163,20 +185,18 @@ class ProjectController {
                 return res.status(404).json({ error: 'Project not found' });
             }
             
-            // Recursive delete
             await fs.rm(projectPath, { recursive: true, force: true });
             
             res.json({ success: true, message: 'Project deleted successfully' });
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            console.error('❌ Delete project error:', error);
+            res.status(500).json({ 
+                error: 'Failed to delete project',
+                message: error.message 
+            });
         }
     }
 
-    /**
-     * Helper: Get project data
-     * @param {string} projectId 
-     * @returns {Promise<object|null>}
-     */
     async getProjectData(projectId) {
         try {
             const projectPath = path.join(this.storagePath, projectId);

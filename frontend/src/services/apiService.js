@@ -48,12 +48,13 @@ class ApiService {
   }
 
   // === DATASOURCE ENDPOINTS ===
+  // NOTE: These are now under /api/:projectId/... (without /projects)
 
   async uploadCSV(projectId, file) {
     const formData = new FormData();
     formData.append('csv', file);
     
-    const response = await fetch(`${this.baseUrl}/projects/${projectId}/upload`, {
+    const response = await fetch(`${this.baseUrl}/${projectId}/upload`, {
       method: 'POST',
       body: formData
     });
@@ -63,25 +64,41 @@ class ApiService {
 
   async getProjectData(projectId, fresh = false) {
     const response = await fetch(
-      `${this.baseUrl}/projects/${projectId}/data?fresh=${fresh}`
+      `${this.baseUrl}/${projectId}/data?fresh=${fresh}`
     );
     if (!response.ok) throw new Error('Failed to fetch project data');
     return response.json();
   }
 
   async getDatasourceConfig(projectId) {
-    const response = await fetch(`${this.baseUrl}/projects/${projectId}/datasource`);
+    const response = await fetch(`${this.baseUrl}/${projectId}/datasource`);
     if (!response.ok) throw new Error('Failed to fetch datasource config');
     return response.json();
   }
 
   async updateDatasourceConfig(projectId, config) {
-    const response = await fetch(`${this.baseUrl}/projects/${projectId}/datasource`, {
+    const response = await fetch(`${this.baseUrl}/${projectId}/datasource`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(config)
     });
     if (!response.ok) throw new Error('Failed to update datasource config');
+    return response.json();
+  }
+
+  async getDatasourceStatus(projectId) {
+    const response = await fetch(`${this.baseUrl}/${projectId}/datasource/status`);
+    if (!response.ok) throw new Error('Failed to fetch datasource status');
+    return response.json();
+  }
+
+  async configureLocalDatasource(projectId, path) {
+    const response = await fetch(`${this.baseUrl}/${projectId}/datasource/local`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path })
+    });
+    if (!response.ok) throw new Error('Failed to configure local datasource');
     return response.json();
   }
 

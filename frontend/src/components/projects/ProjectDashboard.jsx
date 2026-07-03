@@ -15,6 +15,8 @@ const ProjectDashboard = ({ onSelectProject }) => {
       if (onSelectProject) onSelectProject(projectId);
     } catch (err) {
       console.error('Failed to select project:', err);
+      // Show error but don't prevent navigation
+      alert(`Failed to load project: ${err.message}`);
     }
   };
 
@@ -25,6 +27,7 @@ const ProjectDashboard = ({ onSelectProject }) => {
         await deleteProject(projectId);
       } catch (err) {
         console.error('Failed to delete project:', err);
+        alert(`Failed to delete project: ${err.message}`);
       }
     }
   };
@@ -40,7 +43,6 @@ const ProjectDashboard = ({ onSelectProject }) => {
     setError('');
 
     try {
-      // Use the createProject from the context (already destructured above)
       const project = await createProject({
         name: newProjectName.trim(),
         description: newProjectDescription.trim()
