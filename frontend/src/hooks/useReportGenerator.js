@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { buildPreviewHtml } from '../utils/htmlBuilder';
 
-export const useReportGenerator = (csvData, components) => {
+export const useReportGenerator = (csvData, components, currentTheme) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [previewHtml, setPreviewHtml] = useState(null);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
@@ -16,12 +16,13 @@ export const useReportGenerator = (csvData, components) => {
 
     // Simulate async generation with delay
     setTimeout(() => {
-      const compiledHtml = buildPreviewHtml(components, csvData);
+      // Injected currentTheme here to map styles into the HTML compiler pipeline
+      const compiledHtml = buildPreviewHtml(components, csvData, currentTheme);
       setPreviewHtml(compiledHtml);
       setIsPreviewMode(true);
       setIsGenerating(false);
     }, 800);
-  }, [csvData, components]);
+  }, [csvData, components, currentTheme]); // 👈 Added currentTheme to dependencies
 
   const exitPreview = useCallback(() => {
     setIsPreviewMode(false);

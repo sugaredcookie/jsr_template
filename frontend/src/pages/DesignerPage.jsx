@@ -14,6 +14,9 @@ const DesignerPage = () => {
   const [csvHeaders, setCsvHeaders] = useState([]);
   const [csvFileName, setCsvFileName] = useState('');
 
+  // Global Workspace Theme Presets Engine State
+  const [currentTheme, setCurrentTheme] = useState('silicon'); // Options: 'silicon' | 'corporate' | 'editorial'
+
   // Components State
   const [components, setComponents] = useState([]);
   const [selectedComponentId, setSelectedComponentId] = useState(null);
@@ -23,7 +26,7 @@ const DesignerPage = () => {
   // Fullscreen State
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Hooks
+  // Hooks (Pass global theme variable context directly into the HTML Compiler Hook pipeline)
   const {
     isGenerating,
     previewHtml,
@@ -31,7 +34,7 @@ const DesignerPage = () => {
     generatePreview,
     exitPreview,
     downloadHtml
-  } = useReportGenerator(csvData, components);
+  } = useReportGenerator(csvData, components, currentTheme);
 
   const {
     draggedIdx,
@@ -129,7 +132,6 @@ const DesignerPage = () => {
         ]
       };
     } else if (type === 'chart') {
-      // Clean default initialization tracking properties for data metrics visualization configurations
       props = {
         title: 'Analytical Chart Overview',
         chartType: 'bar',
@@ -183,6 +185,8 @@ const DesignerPage = () => {
         componentsCount={components.length}
         onToggleFullscreen={toggleFullscreen}
         isFullscreen={isFullscreen}
+        currentTheme={currentTheme} // 👈 Added theme state binding
+        onThemeChange={setCurrentTheme} // 👈 Added theme control event hook
       />
 
       {/* Main Framework Content Panel Area */}
@@ -215,6 +219,7 @@ const DesignerPage = () => {
             onDragStart={handleDragStart}
             onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
+            currentTheme={currentTheme} // 👈 Injected active workspace preset context
           />
 
           {/* Properties Panel Configuration Shell */}
@@ -223,7 +228,8 @@ const DesignerPage = () => {
             onUpdateComponent={updateComponent}
             onDeleteComponent={deleteComponent}
             csvHeaders={csvHeaders}
-            csvData={csvData} // 👈 Injected active CSV data array layer to unlock context metrics validation calculations
+            csvData={csvData}
+            currentTheme={currentTheme}
           />
           
         </div>

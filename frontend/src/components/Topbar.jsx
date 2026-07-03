@@ -8,7 +8,9 @@ const Topbar = ({
   onDownloadHtml,
   isGenerating,
   isPreviewMode,
-  componentsCount
+  componentsCount,
+  currentTheme,
+  onThemeChange
 }) => {
 
   const componentButtons = [
@@ -20,19 +22,47 @@ const Topbar = ({
     { type: 'page-break', label: 'Page Break', icon: 'fa-scissors', color: 'text-rose-500' }
   ];
 
+  const themes = [
+    { id: 'silicon', label: 'Minimalist', icon: 'fa-square' },
+    { id: 'corporate', label: 'Corporate', icon: 'fa-building-columns' },
+    { id: 'editorial', label: 'Editorial', icon: 'fa-signature' }
+  ];
+
   return (
     <div className="h-16 bg-white border-b border-slate-200/80 flex items-center justify-between px-6 sticky top-0 z-50 select-none">
       
-      {/* Silicon Minimalist Branding Lockup */}
-      <div className="flex items-center gap-2 cursor-default group">
-        <i className="fa-solid fa-square-poll-vertical text-slate-700 text-sm transition-transform duration-300 group-hover:scale-105"></i>
-        <div className="flex items-center font-sans tracking-tight">
-          <span className="text-[13px] font-bold text-slate-900">Report</span>
-          <span className="text-[13px] font-normal text-slate-500 ml-1">Designer</span>
-          <span className="text-[9px] font-semibold font-mono tracking-wider bg-slate-50 border border-slate-200 text-slate-500 px-1.5 py-0.5 rounded-md ml-2">
-            v2.0
-          </span>
+      {/* Silicon Minimalist Branding & Theme Control Selection Group */}
+      <div className="flex items-center gap-6 cursor-default">
+        <div className="flex items-center gap-2 group">
+          <i className="fa-solid fa-square-poll-vertical text-slate-700 text-sm transition-transform duration-300 group-hover:scale-105"></i>
+          <div className="flex items-center font-sans tracking-tight">
+            <span className="text-[13px] font-bold text-slate-900">Report</span>
+            <span className="text-[13px] font-normal text-slate-500 ml-1">Designer</span>
+          </div>
         </div>
+
+        {/* Global Pipeline Theme Selector Controller Switch */}
+        {!isPreviewMode && (
+          <div className="flex bg-slate-100 p-0.5 rounded-xl border border-slate-200/40 shadow-inner items-center animate-fade-in">
+            {themes.map((t) => {
+              const isActive = currentTheme === t.id;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => onThemeChange(t.id)}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all duration-200 ${
+                    isActive 
+                      ? 'bg-white text-slate-900 shadow-3xs border border-slate-200/60 font-extrabold' 
+                      : 'text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  <i className={`fa-solid ${t.icon} text-[9px] ${isActive ? 'text-indigo-500' : 'opacity-60'}`}></i>
+                  <span>{t.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Center Tool Area: Conditionally hide when preview mode is active */}
