@@ -136,51 +136,65 @@ const Canvas = ({
             </div>
           )}
 
-          {comp.type === 'table' && (
-            <div className={`overflow-x-auto pointer-events-none select-none shadow-3xs bg-white ${theme.borderRadius} ${theme.borderStyle}`}>
-              <table className={`w-full text-[11px] text-left border-collapse min-w-[600px] table-layout-fixed ${theme.fontFamily}`}>
-                <thead>
-                  <tr className={`border-b border-slate-200 ${theme.tableHeaderBg}`}>
-                    {comp.props.columns.map((col, idx) => {
-                      const meta = comp.props.columnMetadata?.[col] || { label: col, align: 'left', width: '' };
+          {comp.type === 'table' && (() => {
+            // Filter down to visibility-approved columns dynamically ahead of table drawing routines
+            const visibleColumns = comp.props.columns.filter(
+              col => !comp.props.columnMetadata?.[col]?.hidden
+            );
+
+            return (
+              <div className={`overflow-x-auto pointer-events-none select-none shadow-3xs bg-white relative ${theme.borderRadius} ${theme.borderStyle}`}>
+                {/* Visual configuration state tracking tags */}
+                {comp.props.repeatHeaderOnPageBreak && (
+                  <div className="absolute top-2 right-2 flex items-center gap-1 bg-indigo-50 text-indigo-600 border border-indigo-100 text-[8px] font-bold font-mono uppercase tracking-wider px-1.5 py-0.5 rounded shadow-3xs z-20">
+                    <i className="fa-solid fa-repeat text-[7px]"></i> Print Pagination Active
+                  </div>
+                )}
+
+                <table className={`w-full text-[11px] text-left border-collapse min-w-[600px] table-layout-fixed ${theme.fontFamily}`}>
+                  <thead>
+                    <tr className={`border-b border-slate-200 ${theme.tableHeaderBg}`}>
+                      {visibleColumns.map((col, idx) => {
+                        const meta = comp.props.columnMetadata?.[col] || { label: col, align: 'left', width: '' };
+                        return (
+                          <th key={idx} style={{ textAlign: meta.align, width: meta.width ? `${meta.width}%` : 'auto' }} className={`p-2.5 font-semibold text-[10px] overflow-hidden text-ellipsis whitespace-nowrap ${theme.headingColor} ${theme.monoFont}`}>
+                            {meta.label || col}
+                          </th>
+                        );
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[1, 2, 3].map((rowIdx) => {
+                      const rowData = csvData[rowIdx - 1];
+                      let computedRowStyle = { background: '#ffffff', color: currentTheme === 'editorial' ? '#2d2d2d' : '#334155' };
+
+                      if (csvData.length > 0 && rowData && comp.props.highlightRule) {
+                        const hr = comp.props.highlightRule;
+                        const styleResult = evaluateRowHighlightStyles(rowData, hr);
+                        if (styleResult.backgroundColor) {
+                          computedRowStyle = styleResult;
+                        }
+                      }
+
                       return (
-                        <th key={idx} style={{ textAlign: meta.align, width: meta.width ? `${meta.width}%` : 'auto' }} className={`p-2.5 font-semibold text-[10px] overflow-hidden text-ellipsis whitespace-nowrap ${theme.headingColor} ${theme.monoFont}`}>
-                          {meta.label || col}
-                        </th>
+                        <tr key={rowIdx} style={computedRowStyle} className="border-b border-slate-100 last:border-none bg-white odd:bg-white/40 even:bg-slate-50/20">
+                          {visibleColumns.map((col, idx) => {
+                            const meta = comp.props.columnMetadata?.[col] || { align: 'left' };
+                            return (
+                              <td key={idx} style={{ textAlign: meta.align }} className={`p-2.5 text-xs overflow-hidden text-ellipsis whitespace-nowrap ${theme.monoFont}`}>
+                                {csvData.length > 0 ? csvData[rowIdx - 1]?.[col] || `—` : `[${col}]`}
+                              </td>
+                            );
+                          })}
+                        </tr>
                       );
                     })}
-                  </tr>
-                </thead>
-                <tbody>
-                  {[1, 2, 3].map((rowIdx) => {
-                    const rowData = csvData[rowIdx - 1];
-                    let computedRowStyle = { background: '#ffffff', color: currentTheme === 'editorial' ? '#2d2d2d' : '#334155' };
-
-                    if (csvData.length > 0 && rowData && comp.props.highlightRule) {
-                      const hr = comp.props.highlightRule;
-                      const styleResult = evaluateRowHighlightStyles(rowData, hr);
-                      if (styleResult.backgroundColor) {
-                        computedRowStyle = styleResult;
-                      }
-                    }
-
-                    return (
-                      <tr key={rowIdx} style={computedRowStyle} className="border-b border-slate-100 last:border-none bg-white odd:bg-white/40 even:bg-slate-50/20">
-                        {comp.props.columns.map((col, idx) => {
-                          const meta = comp.props.columnMetadata?.[col] || { align: 'left' };
-                          return (
-                            <td key={idx} style={{ textAlign: meta.align }} className={`p-2.5 text-xs overflow-hidden text-ellipsis whitespace-nowrap ${theme.monoFont}`}>
-                              {csvData.length > 0 ? csvData[rowIdx - 1]?.[col] || `—` : `[${col}]`}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()}
 
           {comp.type === 'spacer' && (
             <div className="py-1 pointer-events-none select-none">

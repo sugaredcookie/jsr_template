@@ -104,15 +104,28 @@ const buildTextComponent = (comp, cfg) => {
 };
 
 /**
- * Build table component HTML
+ * Build table component HTML with robust column toggling and pagination control rules
  */
 const buildTableComponent = (comp, csvData, cfg) => {
-  let html = `<div style="width: 100%; overflow-x: auto; margin-bottom: 24px; border-radius: ${cfg.borderRadius}; border: ${cfg.borderStyle}; box-shadow: 0 1px 3px rgba(0,0,0,0.02); background: #ffffff;">`;
-  html += `<table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; table-layout: fixed; min-width: 650px; font-family: ${cfg.fontFamily};">`;
-  html += `<thead><tr style="background: ${cfg.tableHeaderBg}; border-bottom: ${cfg.borderStyle};">`;
+  const { columns = [], columnMetadata = {}, repeatHeaderOnPageBreak = false } = comp.props;
   
-  comp.props.columns.forEach(col => {
-    const meta = comp.props.columnMetadata?.[col] || { label: col, align: 'left', width: '' };
+  // Filter out columns explicitly flagged as hidden from the compilation stream
+  const visibleColumns = columns.filter(col => !columnMetadata[col]?.hidden);
+
+  // If repeat headers is flagged, inject layout rules to handle hard printing splits cleanly
+  const tableStyles = repeatHeaderOnPageBreak 
+    ? `width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; table-layout: fixed; min-width: 650px; font-family: ${cfg.fontFamily};`
+    : `width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; table-layout: fixed; min-width: 650px; font-family: ${cfg.fontFamily};`;
+
+  const theadStyles = repeatHeaderOnPageBreak ? `display: table-header-group; background: ${cfg.tableHeaderBg}; border-bottom: ${cfg.borderStyle};` : `background: ${cfg.tableHeaderBg}; border-bottom: ${cfg.borderStyle};`;
+  const trPrintStyles = repeatHeaderOnPageBreak ? `page-break-inside: avoid; break-inside: avoid;` : '';
+
+  let html = `<div style="width: 100%; overflow-x: auto; margin-bottom: 24px; border-radius: ${cfg.borderRadius}; border: ${cfg.borderStyle}; box-shadow: 0 1px 3px rgba(0,0,0,0.02); background: #ffffff;">`;
+  html += `<table style="${tableStyles}">`;
+  html += `<thead style="${theadStyles}"><tr style="${trPrintStyles}">`;
+  
+  visibleColumns.forEach(col => {
+    const meta = columnMetadata[col] || { label: col, align: 'left', width: '' };
     const thWidth = meta.width ? `width: ${meta.width}%;` : '';
     html += `<th style="padding: 12px 14px; text-align: ${meta.align}; color: ${cfg.headingColor}; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; ${thWidth} overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${meta.label || col}</th>`;
   });
@@ -126,9 +139,9 @@ const buildTableComponent = (comp, csvData, cfg) => {
     const trColor = highlight.color ? highlight.color : cfg.textColor;
     const rowBorder = idx === rowsToRender.length - 1 ? '' : `border-bottom: ${cfg.borderStyle};`;
 
-    html += `<tr style="background-color: ${trBg}; color: ${trColor}; ${rowBorder}">`;
-    comp.props.columns.forEach(col => {
-      const meta = comp.props.columnMetadata?.[col] || { align: 'left' };
+    html += `<tr style="background-color: ${trBg}; color: ${trColor}; ${rowBorder} ${trPrintStyles}">`;
+    visibleColumns.forEach(col => {
+      const meta = columnMetadata[col] || { align: 'left' };
       html += `<td style="padding: 12px 14px; text-align: ${meta.align}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.4;">${row[col] !== undefined ? row[col] : '—'}</td>`;
     });
     html += `</tr>`;

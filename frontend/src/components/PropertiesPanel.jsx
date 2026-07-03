@@ -1,7 +1,6 @@
 import React from 'react';
 import { getComponentIcon, getComponentLabel, detectColumnType } from '../utils/evaluators.js';
 import TextControls from './PropertyControls/TextControls';
-import TableControls from './PropertyControls/TableControls';
 import GridControls from './PropertyControls/GridControls';
 import SpacerControls from './PropertyControls/SpacerControls';
 
@@ -10,7 +9,7 @@ const PropertiesPanel = ({
   onUpdateComponent, 
   onDeleteComponent,
   csvHeaders,
-  csvData // Ensure csvData is passed from the parent state to handle type detection
+  csvData 
 }) => {
   if (!selectedComponent) {
     return (
@@ -27,6 +26,36 @@ const PropertiesPanel = ({
     );
   }
 
+  // Column Sorter Engine Logic
+  const shiftColumnPosition = (columns, index, direction) => {
+    const updatedCols = [...columns];
+    const targetIdx = index + direction;
+    if (targetIdx < 0 || targetIdx >= updatedCols.length) return;
+
+    // Direct value swap
+    const pivot = updatedCols[index];
+    updatedCols[index] = updatedCols[targetIdx];
+    updatedCols[targetIdx] = pivot;
+
+    onUpdateComponent(selectedComponent.id, { columns: updatedCols });
+  };
+
+  // Visibility Meta Flags Engine
+  const toggleColumnFlag = (colName) => {
+    const currentMetadata = selectedComponent.props?.columnMetadata || {};
+    const specificMeta = currentMetadata[colName] || { label: colName, align: 'left', width: '' };
+
+    const updatedMetadata = {
+      ...currentMetadata,
+      [colName]: {
+        ...specificMeta,
+        hidden: !specificMeta.hidden
+      }
+    };
+
+    onUpdateComponent(selectedComponent.id, { columnMetadata: updatedMetadata });
+  };
+
   const renderControls = () => {
     switch (selectedComponent.type) {
       case 'text':
@@ -37,12 +66,85 @@ const PropertiesPanel = ({
           />
         );
       case 'table':
+        const tableProps = selectedComponent.props || {};
+        const columns = tableProps.columns || [];
+        const metadata = tableProps.columnMetadata || {};
+
         return (
-          <TableControls 
-            component={selectedComponent} 
-            onUpdate={(props) => onUpdateComponent(selectedComponent.id, props)}
-            csvHeaders={csvHeaders}
-          />
+          <div className="space-y-4 animate-fade-in">
+            {/* Automatic PDF Head Repeat Control Configuration */}
+            <div className="p-3 bg-indigo-50/40 border border-indigo-100 rounded-xl shadow-3xs">
+              <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={!!tableProps.repeatHeaderOnPageBreak}
+                  onChange={(e) => onUpdateComponent(selectedComponent.id, { repeatHeaderOnPageBreak: e.target.checked })}
+                  className="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 text-xs cursor-pointer"
+                />
+                <div className="flex flex-col">
+                  <span className="text-[11px] font-bold text-slate-700">Repeat Table Headers</span>
+                  <span className="text-[9px] text-slate-400 mt-0.5 leading-normal">
+                    Automatically duplicate table column titles at the top of every broken PDF page layout.
+                  </span>
+                </div>
+              </label>
+            </div>
+
+            {/* Active Columns Pipeline Manager */}
+            <div>
+              <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                Active Columns Setup ({columns.length})
+              </label>
+              
+              <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1 border border-slate-100 p-1 bg-slate-50/50 rounded-xl">
+                {columns.map((col, idx) => {
+                  const meta = metadata[col] || {};
+                  const isHidden = !!meta.hidden;
+
+                  return (
+                    <div 
+                      key={col} 
+                      className={`flex items-center justify-between p-2 rounded-lg border bg-white transition-all text-xs font-semibold ${
+                        isHidden ? 'opacity-50 border-slate-200 bg-slate-50/50' : 'border-slate-200 shadow-3xs text-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 truncate max-w-[70%]">
+                        <button
+                          type="button"
+                          onClick={() => toggleColumnFlag(col)}
+                          className={`text-xs p-1 hover:bg-slate-50 rounded transition-colors ${isHidden ? 'text-slate-300' : 'text-indigo-500'}`}
+                          title={isHidden ? "Show Field" : "Hide Field"}
+                        >
+                          <i className={`fa-solid ${isHidden ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                        </button>
+                        <span className="truncate font-mono text-[10px]">{meta.label || col}</span>
+                      </div>
+
+                      {/* Manual Positional Shifters */}
+                      <div className="flex items-center gap-0.5">
+                        <button
+                          type="button"
+                          disabled={idx === 0}
+                          onClick={() => shiftColumnPosition(columns, idx, -1)}
+                          className="p-1 text-slate-400 hover:text-slate-600 disabled:opacity-20 rounded hover:bg-slate-50 transition-all"
+                        >
+                          <i className="fa-solid fa-chevron-up text-[9px]"></i>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={idx === columns.length - 1}
+                          onClick={() => shiftColumnPosition(columns, idx, 1)}
+                          className="p-1 text-slate-400 hover:text-slate-600 disabled:opacity-20 rounded hover:bg-slate-50 transition-all"
+                        >
+                          <i className="fa-solid fa-chevron-down text-[9px]"></i>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         );
       case 'grid-row':
         return (
@@ -72,7 +174,6 @@ const PropertiesPanel = ({
         const chartProps = selectedComponent.props || {};
         return (
           <div className="space-y-4 animate-fade-in">
-            {/* Chart Title Customization */}
             <div>
               <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Chart Component Header</label>
               <input
@@ -84,7 +185,6 @@ const PropertiesPanel = ({
               />
             </div>
 
-            {/* Layout Type Selection */}
             <div>
               <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Visualization Model</label>
               <div className="grid grid-cols-3 gap-1 bg-slate-50 border border-slate-200 p-1 rounded-xl">
@@ -106,7 +206,6 @@ const PropertiesPanel = ({
               </div>
             </div>
 
-            {/* X-Axis Field Mapping */}
             <div>
               <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">X-Axis Labels (Categorical Column)</label>
               <select
@@ -119,15 +218,12 @@ const PropertiesPanel = ({
               </select>
             </div>
 
-            {/* Type-Safe Calculation Selection */}
             <div>
               <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Metric Formula Operation</label>
               <select
                 value={chartProps.operation || 'COUNT'}
                 onChange={(e) => {
                   const op = e.target.value;
-                  
-                  // Guard: If the current column is non-numeric, do not let them switch to arithmetic modes
                   if (op !== 'COUNT' && chartProps.yAxisColumn && csvData) {
                     const detectedType = detectColumnType(csvData, chartProps.yAxisColumn);
                     if (detectedType === 'string') {
@@ -135,7 +231,6 @@ const PropertiesPanel = ({
                       return;
                     }
                   }
-
                   onUpdateComponent(selectedComponent.id, { 
                     operation: op,
                     yAxisColumn: op === 'COUNT' ? '' : (chartProps.yAxisColumn || csvHeaders[0] || '')
@@ -149,7 +244,6 @@ const PropertiesPanel = ({
               </select>
             </div>
 
-            {/* Y-Axis Value Field Mapping with Type Guard Checks */}
             {chartProps.operation !== 'COUNT' && (
               <div className="animate-slide-in">
                 <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Y-Axis Values (Numeric Aggregation Target)</label>
