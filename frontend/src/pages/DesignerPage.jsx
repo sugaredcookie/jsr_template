@@ -47,11 +47,7 @@ const DesignerPage = () => {
   // Fullscreen State
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // UI State for Data Source Tab
-  const [activeTab, setActiveTab] = useState('designer'); // 'designer' | 'datasource'
-  const [showDataPreview, setShowDataPreview] = useState(false);
-
-  // Hooks
+  // Hooks (Destructure the fresh PDF and Excel execution streams here)
   const {
     isGenerating,
     previewHtml,
@@ -59,8 +55,8 @@ const DesignerPage = () => {
     generatePreview,
     exitPreview,
     downloadHtml,
-    downloadPdf,
-    downloadXlsx
+    downloadPdf,   // 👈 Extracted PDF driver pipeline
+    downloadXlsx   // 👈 Extracted Excel structural compiler pipeline
   } = useReportGenerator(csvData, components, currentTheme);
 
   const {
@@ -161,7 +157,7 @@ const DesignerPage = () => {
         columns: headers, 
         columnMetadata: {}, 
         highlightRule: null,
-        repeatHeaderOnPageBreak: false
+        repeatHeaderOnPageBreak: false // 👈 Initialized structural constraint property
       };
     } else if (type === 'spacer') {
       props = { height: 24, variant: 'line' };
@@ -238,8 +234,8 @@ const DesignerPage = () => {
         onGeneratePreview={generatePreview}
         onExitPreview={exitPreview}
         onDownloadHtml={downloadHtml}
-        onDownloadPdf={downloadPdf}
-        onDownloadXlsx={downloadXlsx}
+        onDownloadPdf={downloadPdf}   // 👈 Linked PDF export trigger
+        onDownloadXlsx={downloadXlsx} // 👈 Linked Excel export trigger
         isGenerating={isGenerating}
         isPreviewMode={isPreviewMode}
         csvHeaders={csvHeaders}

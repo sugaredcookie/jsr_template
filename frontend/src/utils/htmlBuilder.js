@@ -218,7 +218,7 @@ const transformDataForChart = (csvData, xAxisCol, yAxisCol, operation) => {
 };
 
 /**
- * Build dynamic chart visualization container item block using sandboxed JavaScript CDNs
+ * Build dynamic chart visualization with automatic label skipping and forced width compression
  */
 const buildChartComponent = (comp, csvData, cfg) => {
   const { 
@@ -226,18 +226,27 @@ const buildChartComponent = (comp, csvData, cfg) => {
     xAxisColumn = '', 
     yAxisColumn = '', 
     operation = 'COUNT', 
-    title = 'Analytical Chart Layer' 
+    title = 'Analytical Chart Overview' 
   } = comp.props;
   
   const canvasId = `render-canvas-target-${comp.id}`;
-  const { labels, data } = transformDataForChart(csvData, xAxisColumn, yAxisColumn, operation);
-  const chartColors = chartType === 'pie' ? cfg.chartPieColors : cfg.chartBarBg;
+  
+  // Transform data
+  let { labels, data } = transformDataForChart(csvData, xAxisColumn, yAxisColumn, operation);
+  
+  // Limit to first 50 points
+  if (labels.length > 50) {
+    labels = labels.slice(0, 50);
+    data = data.slice(0, 50);
+  }
+
+  const chartColors = chartType === 'pie' ? cfg.chartPieColors : JSON.stringify([cfg.accentColor]);
 
   return `
-    <div style="width: 100%; margin-bottom: 28px; padding: 24px; background: #ffffff; border: ${cfg.borderStyle}; border-radius: ${cfg.borderRadius}; box-shadow: 0 1px 3px rgba(0,0,0,0.01); box-sizing: border-box;">
+    <div style="width: 100%; margin-bottom: 28px; padding: 24px; background: #ffffff; border: ${cfg.borderStyle}; border-radius: ${cfg.borderRadius}; box-sizing: border-box;">
       <h4 style="margin: 0 0 20px 0; font-size: 11px; font-weight: 700; color: ${cfg.headingColor}; text-transform: uppercase; letter-spacing: 0.6px; font-family: ${cfg.fontFamily};">${title}</h4>
-      <div style="position: relative; width: 100%; height: 320px;">
-        <canvas id="${canvasId}"></canvas>
+      <div style="position: relative; width: 100%; height: 350px;">
+        <canvas id="${canvasId}" style="width: 100% !important; height: 100% !important;"></canvas>
       </div>
       <script>
         (function() {
@@ -249,25 +258,42 @@ const buildChartComponent = (comp, csvData, cfg) => {
             data: {
               labels: ${JSON.stringify(labels)},
               datasets: [{
-                label: '${operation === 'COUNT' ? 'Total Records' : operation + ' of ' + yAxisColumn}',
+                label: 'Data',
                 data: ${JSON.stringify(data)},
                 backgroundColor: ${chartColors},
                 borderColor: '${cfg.chartBorder}',
-                borderWidth: 2,
-                borderRadius: ${chartType === 'bar' ? 6 : 0},
-                hoverBackgroundColor: '${cfg.accentColor}'
+                borderWidth: 1,
+                borderRadius: ${chartType === 'bar' ? 4 : 0}
               }]
             },
             options: {
               responsive: true,
               maintainAspectRatio: false,
-              animation: { duration: 0 }, // 👈 FIXED: Bypasses animation frames to ensure instant vector rendering for headless HTML canvas printing
+              devicePixelRatio: 2,
+              animation: { duration: 0 },
+              layout: { 
+                padding: { left: 10, right: 10, top: 10, bottom: 40 }
+              },
               plugins: {
-                legend: { display: ${chartType === 'pie'}, position: 'bottom', labels: { boxWidth: 12, font: { size: 11, family: "${cfg.fontFamily}" } } }
+                legend: { 
+                  display: ${chartType === 'pie'}, 
+                  position: 'bottom', 
+                  labels: { font: { family: "${cfg.fontFamily}" } } 
+                }
               },
               scales: ${chartType !== 'pie' ? `{
-                y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { color: '${cfg.subtextColor}', font: { size: 10, family: "${cfg.fontFamily}" } } },
-                x: { grid: { display: false }, ticks: { color: '${cfg.subtextColor}', font: { size: 10, family: "${cfg.fontFamily}" } } }
+                y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
+                x: { 
+                  grid: { display: false }, 
+                  ticks: { 
+                    font: { size: 9, family: "${cfg.fontFamily}" },
+                    autoSkip: true, 
+                    maxRotation: 45, 
+                    minRotation: 45
+                  },
+                  barPercentage: 0.8,
+                  categoryPercentage: 0.8
+                }
               }` : '{}'}
             }
           });

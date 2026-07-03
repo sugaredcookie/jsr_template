@@ -6,8 +6,9 @@ const Topbar = ({
   onGeneratePreview,
   onExitPreview,
   onDownloadHtml,
-  onDownloadPdf, // 👈 Hooked in new PDF pipeline driver
-  onDownloadXlsx, // 👈 Hooked in new Excel pipeline driver
+  onDownloadPdf, 
+  onDownloadXlsx, 
+  onDownloadDocx, // 👈 Hooked in new Word pipeline driver prop
   isGenerating,
   isPreviewMode,
   componentsCount,
@@ -132,6 +133,15 @@ const Topbar = ({
                 >
                   <i className="fa-solid fa-file-pdf text-red-500 w-4 text-center"></i>
                   <span>Export to PDF (.pdf)</span>
+                </button>
+
+                {/* FIXED/ADDED: Word Export Option Segment */}
+                <button
+                  onClick={() => { onDownloadDocx(); setIsDropdownOpen(false); }}
+                  className="flex items-center gap-2.5 px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  <i className="fa-solid fa-file-word text-blue-500 w-4 text-center"></i>
+                  <span>Export to Word (.doc)</span>
                 </button>
                 
                 <button
