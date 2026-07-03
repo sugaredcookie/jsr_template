@@ -8,7 +8,6 @@ const Topbar = ({
   onDownloadHtml,
   isGenerating,
   isPreviewMode,
-  csvHeaders,
   componentsCount
 }) => {
 
@@ -16,6 +15,7 @@ const Topbar = ({
     { type: 'text', label: 'Text', icon: 'fa-font', color: 'text-blue-500' },
     { type: 'table', label: 'Table', icon: 'fa-table-columns', color: 'text-emerald-500' },
     { type: 'grid-row', label: 'Infographic Grid', icon: 'fa-chart-pie', color: 'text-violet-500' },
+    { type: 'chart', label: 'Analytics Chart', icon: 'fa-chart-simple', color: 'text-indigo-500' },
     { type: 'spacer', label: 'Spacer', icon: 'fa-arrows-left-right-to-line', color: 'text-amber-500' },
     { type: 'page-break', label: 'Page Break', icon: 'fa-scissors', color: 'text-rose-500' }
   ];
@@ -39,7 +39,7 @@ const Topbar = ({
       {!isPreviewMode ? (
         <div className="flex items-center gap-2 bg-slate-200/40 p-1.5 rounded-2xl border border-slate-300/20 backdrop-blur-xs animate-fade-in">
           {/* Upload CSV */}
-          <label className="cursor-pointer flex items-center gap-2 px-3.5 py-1.5 bg-white border border-slate-200/80 text-slate-700 rounded-xl shadow-3xs hover:bg-slate-50 hover:border-slate-300/80 text-xs font-semibold transform hover:-translate-y-0.5 active:translate-y-0 active:scale-98 transition-all duration-200">
+          <label className="cursor-pointer flex items-center gap-2 px-3.5 py-1.5 bg-white border border-slate-200/80 text-slate-700 rounded-xl shadow-3xs hover:bg-slate-50 text-xs font-semibold transform hover:-translate-y-0.5 active:translate-y-0 active:scale-98 transition-all duration-200">
             <i className="fa-solid fa-cloud-arrow-up text-indigo-500 text-xs"></i>
             <span>Upload CSV</span>
             <input type="file" accept=".csv" className="hidden" onChange={onFileUpload} />

@@ -4,7 +4,10 @@ import { evaluateRowHighlightStyles, evaluateMetricValue } from './evaluators';
  * Build HTML preview from components and CSV data
  */
 export const buildPreviewHtml = (components, csvData) => {
-  let compiledHtml = `<div style="padding: 40px; width: 100%; max-width: 920px; margin: 0 auto; background: #ffffff; color: #1e293b; text-align: left; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; box-sizing: border-box;">`;
+  // Inject Chart.js CDN context ahead of the core design pipeline body
+  let compiledHtml = `
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <div style="padding: 40px; width: 100%; max-width: 920px; margin: 0 auto; background: #ffffff; color: #1e293b; text-align: left; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; box-sizing: border-box;">`;
   
   components.forEach(comp => {
     if (comp.type === 'text') {
@@ -17,6 +20,8 @@ export const buildPreviewHtml = (components, csvData) => {
       compiledHtml += buildPageBreakComponent();
     } else if (comp.type === 'grid-row') {
       compiledHtml += buildGridRowComponent(comp, csvData);
+    } else if (comp.type === 'chart') {
+      compiledHtml += buildChartComponent(comp, csvData);
     }
   });
   
@@ -100,7 +105,6 @@ const buildPageBreakComponent = () => {
  */
 const buildGridRowComponent = (comp, csvData) => {
   const gap = 16;
-  const columnsCount = comp.props.columnsCount || comp.props.gridItems.length || 2;
   
   let html = `<div style="display: table; table-layout: fixed; width: 100%; border-collapse: separate; border-spacing: ${gap}px 0px; margin-left: -${gap}px; margin-right: -${gap}px; margin-bottom: 24px;">`;
   html += `<div style="display: table-row;">`;
@@ -117,4 +121,99 @@ const buildGridRowComponent = (comp, csvData) => {
   
   html += `</div></div>`;
   return html;
+};
+
+/**
+ * Transform, clean, group, and aggregate unstructured CSV streams for Chart engines
+ */
+const transformDataForChart = (csvData, xAxisCol, yAxisCol, operation) => {
+  if (!csvData.length || !xAxisCol) return { labels: [], data: [] };
+
+  const groups = {};
+  csvData.forEach(row => {
+    const key = String(row[xAxisCol] || 'Unassigned').trim();
+    if (!groups[key]) groups[key] = [];
+
+    if (operation !== 'COUNT' && yAxisCol) {
+      const parsedVal = parseFloat(String(row[yAxisCol] || '').replace(/[^0-9.-]/g, ''));
+      if (!isNaN(parsedVal)) groups[key].push(parsedVal);
+    } else {
+      groups[key].push(1);
+    }
+  });
+
+  const labels = Object.keys(groups);
+  const data = labels.map(key => {
+    const datasetList = groups[key];
+    if (operation === 'COUNT') return datasetList.length;
+    if (datasetList.length === 0) return 0;
+
+    const aggregateSum = datasetList.reduce((sum, val) => sum + val, 0);
+    return operation === 'SUM' ? aggregateSum : parseFloat((aggregateSum / datasetList.length).toFixed(2));
+  });
+
+  return { labels, data };
+};
+
+/**
+ * Build dynamic chart visualization container item block using sandboxed JavaScript CDNs
+ */
+const buildChartComponent = (comp, csvData) => {
+  const { 
+    chartType = 'bar', 
+    xAxisColumn = '', 
+    yAxisColumn = '', 
+    operation = 'COUNT', 
+    title = 'Analytical Chart Layer' 
+  } = comp.props;
+  
+  const canvasId = `render-canvas-target-${comp.id}`;
+  const { labels, data } = transformDataForChart(csvData, xAxisColumn, yAxisColumn, operation);
+
+  // High-fidelity background hues for categorical pie/donut parameters
+  const chartColors = chartType === 'pie' 
+    ? `['rgba(99, 102, 241, 0.65)', 'rgba(168, 85, 247, 0.65)', 'rgba(234, 179, 8, 0.65)', 'rgba(16, 185, 129, 0.65)', 'rgba(244, 63, 94, 0.65)']` 
+    : `'rgba(99, 102, 241, 0.15)'`;
+
+  return `
+    <div style="width: 100%; margin-bottom: 28px; padding: 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.01); box-sizing: border-box;">
+      <h4 style="margin: 0 0 20px 0; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.6px; font-family: sans-serif;">${title}</h4>
+      <div style="position: relative; width: 100%; height: 320px;">
+        <canvas id="${canvasId}"></canvas>
+      </div>
+      <script>
+        (function() {
+          const canvasTarget = document.getElementById('${canvasId}');
+          if (!canvasTarget) return;
+          
+          new Chart(canvasTarget.getContext('2d'), {
+            type: '${chartType}',
+            data: {
+              labels: ${JSON.stringify(labels)},
+              datasets: [{
+                label: '${operation === 'COUNT' ? 'Total Records' : operation + ' of ' + yAxisColumn}',
+                data: ${JSON.stringify(data)},
+                backgroundColor: ${chartColors},
+                borderColor: '#6366f1',
+                borderWidth: 2,
+                borderRadius: ${chartType === 'bar' ? 6 : 0},
+                hoverBackgroundColor: '#4f46e5'
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: ${chartType === 'pie'}, position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+              },
+              scales: ${chartType !== 'pie' ? `{
+                y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { color: '#64748b', font: { size: 10 } } },
+                x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 10 } } }
+              }` : '{}'}
+            }
+          });
+        })();
+      </script>
+    </div>
+  `;
 };

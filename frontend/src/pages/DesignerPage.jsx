@@ -76,6 +76,16 @@ const DesignerPage = () => {
               }));
               return { ...comp, props: { ...comp.props, gridItems: updatedItems } };
             }
+            if (comp.type === 'chart') {
+              return {
+                ...comp,
+                props: {
+                  ...comp.props,
+                  xAxisColumn: comp.props.xAxisColumn || headers[0] || '',
+                  yAxisColumn: comp.props.operation !== 'COUNT' ? (comp.props.yAxisColumn || headers[0] || '') : ''
+                }
+              };
+            }
             return comp;
           }));
         }
@@ -86,7 +96,7 @@ const DesignerPage = () => {
     });
   }, []);
 
-  // Add Component
+  // Add Component Factory Orchestration Engine
   const addComponent = useCallback((type) => {
     const currentId = nextId;
     let props = {};
@@ -117,6 +127,15 @@ const DesignerPage = () => {
           { id: `metric-1-${currentId}`, title: 'Headcount Summary', column: csvHeaders[0] || '', operation: 'COUNT' },
           { id: `metric-2-${currentId}`, title: 'Performance Average', column: csvHeaders[0] || '', operation: 'AVG' }
         ]
+      };
+    } else if (type === 'chart') {
+      // Clean default initialization tracking properties for data metrics visualization configurations
+      props = {
+        title: 'Analytical Chart Overview',
+        chartType: 'bar',
+        xAxisColumn: csvHeaders[0] || '',
+        yAxisColumn: '',
+        operation: 'COUNT'
       };
     }
 
@@ -181,7 +200,7 @@ const DesignerPage = () => {
             components={components}
           />
 
-          {/* Canvas */}
+          {/* Canvas Component Stack Workspace */}
           <Canvas
             components={components}
             csvData={csvData}
@@ -198,12 +217,13 @@ const DesignerPage = () => {
             onDragEnd={handleDragEnd}
           />
 
-          {/* Properties Panel */}
+          {/* Properties Panel Configuration Shell */}
           <PropertiesPanel
             selectedComponent={selectedComponent}
             onUpdateComponent={updateComponent}
             onDeleteComponent={deleteComponent}
             csvHeaders={csvHeaders}
+            csvData={csvData} // 👈 Injected active CSV data array layer to unlock context metrics validation calculations
           />
           
         </div>

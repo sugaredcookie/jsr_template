@@ -162,6 +162,83 @@ const Canvas = ({
               ))}
             </div>
           )}
+
+          {/* Interactive Chart Core UI Component Layer */}
+          {comp.type === 'chart' && (
+            <div className="w-full bg-slate-50/60 border border-slate-200/80 rounded-2xl p-5 font-sans select-none animate-fade-in">
+              <div className="flex items-center justify-between border-b border-slate-200/60 pb-3 mb-5">
+                <div className="flex items-center gap-2">
+                  <i className="fa-solid fa-chart-simple text-indigo-500 text-xs"></i>
+                  <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wide">
+                    {comp.props.title || 'Data Visualization Summary'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-indigo-50 border border-indigo-100 rounded-lg px-2 py-0.5">
+                  <span className="text-[9px] font-black text-indigo-600 uppercase tracking-wider font-mono">
+                    {comp.props.chartType || 'bar'}
+                  </span>
+                </div>
+              </div>
+
+              {/* High-Fidelity Blueprint Chart Mock Vector Rendering Framework */}
+              <div className="h-44 w-full bg-white border border-slate-200/50 rounded-xl p-4 flex flex-col justify-between relative overflow-hidden group-hover:border-indigo-200/50 transition-all">
+                
+                {comp.props.chartType === 'pie' ? (
+                  /* Dynamic Blueprint Donut Ring Layout Geometry */
+                  <div className="flex-1 flex items-center justify-center relative">
+                    <div className="w-28 h-28 rounded-full border-[14px] border-slate-100 flex items-center justify-center relative animate-pulse">
+                      <div className="absolute inset-0 rounded-full border-[14px] border-transparent border-t-indigo-500/20 border-l-purple-500/20 rotate-45"></div>
+                      <div className="text-center">
+                        <span className="text-[9px] font-mono font-bold text-slate-400 block tracking-tight">X: {comp.props.xAxisColumn || 'None'}</span>
+                        <span className="text-[8px] font-mono bg-slate-100 text-slate-500 px-1 rounded mt-0.5 inline-block">{comp.props.operation}</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* Dynamic Bar or Trend Line Graph Layout */
+                  <div className="flex-1 flex flex-col justify-end gap-2.5 pb-2 relative">
+                    <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-40">
+                      <div className="w-full border-b border-slate-100"></div>
+                      <div className="w-full border-b border-slate-100"></div>
+                      <div className="w-full border-b border-slate-100"></div>
+                    </div>
+                    
+                    <div className="flex items-end justify-around h-full px-4 relative z-10">
+                      {[60, 85, 45, 100, 70].map((heightHeight, idx) => (
+                        <div key={idx} className="flex flex-col items-center gap-1.5 w-12 group/bar">
+                          {comp.props.chartType === 'line' ? (
+                            /* Trend Point Nodes */
+                            <div className="w-full flex flex-col items-center relative" style={{ marginBottom: `${heightHeight * 0.9}px` }}>
+                              <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 ring-4 ring-indigo-500/10 shadow-3xs group-hover/bar:scale-110 transition-transform"></div>
+                              {idx < 4 && (
+                                <div className="absolute left-1/2 top-1.5 w-16 h-0.5 bg-indigo-400/30 -rotate-12 origin-left pointer-events-none"></div>
+                              )}
+                            </div>
+                          ) : (
+                            /* Bar Columns */
+                            <div 
+                              className="w-8 bg-gradient-to-t from-indigo-500/10 to-indigo-500/20 border border-indigo-500/30 rounded-t-md group-hover/bar:from-indigo-500/20 group-hover/bar:to-indigo-500/30 transition-all duration-300"
+                              style={{ height: `${heightHeight}%` }}
+                            ></div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Relational Mapping Footer Variables Tag */}
+                {comp.props.chartType !== 'pie' && (
+                  <div className="border-t border-slate-100 pt-2 flex items-center justify-between text-[9px] font-mono text-slate-400 font-medium">
+                    <span className="truncate max-w-[50%]">X-Axis: <b className="text-slate-600">{comp.props.xAxisColumn || 'Unset'}</b></span>
+                    <span className="truncate max-w-[50%] text-right">
+                      Y-Axis: <b className="text-indigo-600">{comp.props.operation}({comp.props.operation === 'COUNT' ? 'all' : comp.props.yAxisColumn || 'Unset'})</b>
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
