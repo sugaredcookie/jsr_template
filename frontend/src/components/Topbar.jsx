@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 const Topbar = ({ 
   onFileUpload,
@@ -6,12 +6,16 @@ const Topbar = ({
   onGeneratePreview,
   onExitPreview,
   onDownloadHtml,
+  onDownloadPdf, // 👈 Hooked in new PDF pipeline driver
+  onDownloadXlsx, // 👈 Hooked in new Excel pipeline driver
   isGenerating,
   isPreviewMode,
   componentsCount,
   currentTheme,
   onThemeChange
 }) => {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
   const componentButtons = [
     { type: 'text', label: 'Text', icon: 'fa-font', color: 'text-blue-500' },
@@ -28,6 +32,17 @@ const Topbar = ({
     { id: 'editorial', label: 'Editorial', icon: 'fa-signature' }
   ];
 
+  // Auto-collapse export menu dropdown on structural focus loss
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
+
   return (
     <div className="h-16 bg-white border-b border-slate-200/80 flex items-center justify-between px-6 sticky top-0 z-50 select-none">
       
@@ -41,7 +56,7 @@ const Topbar = ({
           </div>
         </div>
 
-        {/* Global Pipeline Theme Selector Controller Switch */}
+        {/* Global Theme Selector Switch Controls */}
         {!isPreviewMode && (
           <div className="flex bg-slate-100 p-0.5 rounded-xl border border-slate-200/40 shadow-inner items-center animate-fade-in">
             {themes.map((t) => {
@@ -97,14 +112,47 @@ const Topbar = ({
       {/* Far Right Action Zone */}
       <div className="flex items-center gap-2 flex-shrink-0">
         {isPreviewMode ? (
-          <div className="flex items-center gap-2 animate-fade-in">
+          <div className="flex items-center gap-2 animate-fade-in relative" ref={dropdownRef}>
+            {/* Custom Multi-Format Export Selector Trigger Button */}
             <button
-              onClick={onDownloadHtml}
-              className="flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-semibold shadow-3xs transform hover:-translate-y-0.5 active:translate-y-0 active:scale-98 transition-all duration-200"
+              onClick={() => setIsDropdownOpen(prev => !prev)}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-semibold shadow-3xs transform hover:-translate-y-0.5 active:translate-y-0 active:scale-98 transition-all duration-200"
             >
               <i className="fa-solid fa-arrow-down-to-line text-slate-400 text-xs"></i>
-              <span>Download Report</span>
+              <span>Export Report</span>
+              <i className={`fa-solid fa-chevron-down text-[9px] text-slate-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`}></i>
             </button>
+
+            {/* Dropdown Options Overlay Vector */}
+            {isDropdownOpen && (
+              <div className="absolute right-0 top-11 w-48 bg-white border border-slate-200 rounded-xl shadow-lg py-1.5 z-50 animate-fade-in flex flex-col">
+                <button
+                  onClick={() => { onDownloadPdf(); setIsDropdownOpen(false); }}
+                  className="flex items-center gap-2.5 px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  <i className="fa-solid fa-file-pdf text-red-500 w-4 text-center"></i>
+                  <span>Export to PDF (.pdf)</span>
+                </button>
+                
+                <button
+                  onClick={() => { onDownloadXlsx(); setIsDropdownOpen(false); }}
+                  className="flex items-center gap-2.5 px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  <i className="fa-solid fa-file-excel text-emerald-500 w-4 text-center"></i>
+                  <span>Export Dataset (.xls)</span>
+                </button>
+
+                <div className="border-t border-slate-100 my-1"></div>
+
+                <button
+                  onClick={() => { onDownloadHtml(); setIsDropdownOpen(false); }}
+                  className="flex items-center gap-2.5 px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  <i className="fa-solid fa-code text-indigo-500 w-4 text-center"></i>
+                  <span>Source Template (.html)</span>
+                </button>
+              </div>
+            )}
             
             <button
               onClick={onExitPreview}
