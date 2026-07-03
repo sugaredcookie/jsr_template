@@ -1,0 +1,13 @@
+Application,Version,Environment,Owner,ReleaseDate,Status
+"RECON","2.1.0","PROD","Payments Team","2026-06-01","Live"
+"TRADING","1.8.4","PROD","Trading Team","2026-05-28","Live"
+"REPORTING","3.0.1","PROD","Reporting Team","2026-05-15","Live"
+"SETTLEMENTS","2.5.3","QA","Operations Team","2026-06-06","Testing"
+"RISK-MANAGER","4.1.2","UAT","Risk Team","2026-06-03","Ready For Promotion"
+"MARKET-DATA","1.9.0","QA","Market Team","2026-05-30","Testing"
+"AUTH-SERVICE","5.0.0","PROD","Platform Team","2026-05-10","Live"
+"CLIENT-PORTAL","2.7.1","UAT","Frontend Team","2026-06-04","Ready For Promotion"
+"NOTIFICATION-SERVICE","1.4.8","DEV","Platform Team","2026-06-07","Development"
+"AUDIT-ENGINE","3.2.0","QA","Compliance Team","2026-06-02","Testing"
+"PAYMENT-GATEWAY","6.0.1","PROD","Payments Team","2026-05-20","Live"
+"DATA-WAREHOUSE","2.3.5","UAT","Data Team","2026-06-01","Ready For Promotion"
