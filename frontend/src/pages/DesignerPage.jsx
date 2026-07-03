@@ -26,7 +26,7 @@ const DesignerPage = () => {
   // Fullscreen State
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Hooks (Destructure the fresh PDF and Excel execution streams here)
+  // Hooks (Destructure the Word export pipeline alongside PDF and Excel formats here)
   const {
     isGenerating,
     previewHtml,
@@ -34,8 +34,9 @@ const DesignerPage = () => {
     generatePreview,
     exitPreview,
     downloadHtml,
-    downloadPdf,   // 👈 Extracted PDF driver pipeline
-    downloadXlsx   // 👈 Extracted Excel structural compiler pipeline
+    downloadPdf,   
+    downloadXlsx,
+    downloadDocx // 👈 Extracted native Word processing compiler pipeline
   } = useReportGenerator(csvData, components, currentTheme);
 
   const {
@@ -120,7 +121,7 @@ const DesignerPage = () => {
         columns: csvHeaders.length > 0 ? csvHeaders : ['Column 1', 'Column 2', 'Column 3'], 
         columnMetadata: {}, 
         highlightRule: null,
-        repeatHeaderOnPageBreak: false // 👈 Initialized structural constraint property
+        repeatHeaderOnPageBreak: false 
       };
     } else if (type === 'spacer') {
       props = { height: 24, variant: 'line' };
@@ -182,8 +183,9 @@ const DesignerPage = () => {
         onGeneratePreview={generatePreview}
         onExitPreview={exitPreview}
         onDownloadHtml={downloadHtml}
-        onDownloadPdf={downloadPdf}   // 👈 Linked PDF export trigger
-        onDownloadXlsx={downloadXlsx} // 👈 Linked Excel export trigger
+        onDownloadPdf={downloadPdf}   
+        onDownloadXlsx={downloadXlsx} 
+        onDownloadDocx={downloadDocx} // 👈 FIXED: Successfully wired Word document compilation parameter trigger link
         isGenerating={isGenerating}
         isPreviewMode={isPreviewMode}
         csvHeaders={csvHeaders}
