@@ -26,14 +26,16 @@ const DesignerPage = () => {
   // Fullscreen State
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Hooks (Pass global theme variable context directly into the HTML Compiler Hook pipeline)
+  // Hooks (Destructure the fresh PDF and Excel execution streams here)
   const {
     isGenerating,
     previewHtml,
     isPreviewMode,
     generatePreview,
     exitPreview,
-    downloadHtml
+    downloadHtml,
+    downloadPdf,   // 👈 Extracted PDF driver pipeline
+    downloadXlsx   // 👈 Extracted Excel structural compiler pipeline
   } = useReportGenerator(csvData, components, currentTheme);
 
   const {
@@ -117,7 +119,8 @@ const DesignerPage = () => {
       props = { 
         columns: csvHeaders.length > 0 ? csvHeaders : ['Column 1', 'Column 2', 'Column 3'], 
         columnMetadata: {}, 
-        highlightRule: null 
+        highlightRule: null,
+        repeatHeaderOnPageBreak: false // 👈 Initialized structural constraint property
       };
     } else if (type === 'spacer') {
       props = { height: 24, variant: 'line' };
@@ -179,14 +182,16 @@ const DesignerPage = () => {
         onGeneratePreview={generatePreview}
         onExitPreview={exitPreview}
         onDownloadHtml={downloadHtml}
+        onDownloadPdf={downloadPdf}   // 👈 Linked PDF export trigger
+        onDownloadXlsx={downloadXlsx} // 👈 Linked Excel export trigger
         isGenerating={isGenerating}
         isPreviewMode={isPreviewMode}
         csvHeaders={csvHeaders}
         componentsCount={components.length}
         onToggleFullscreen={toggleFullscreen}
         isFullscreen={isFullscreen}
-        currentTheme={currentTheme} // 👈 Added theme state binding
-        onThemeChange={setCurrentTheme} // 👈 Added theme control event hook
+        currentTheme={currentTheme}
+        onThemeChange={setCurrentTheme}
       />
 
       {/* Main Framework Content Panel Area */}
@@ -219,7 +224,7 @@ const DesignerPage = () => {
             onDragStart={handleDragStart}
             onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
-            currentTheme={currentTheme} // 👈 Injected active workspace preset context
+            currentTheme={currentTheme}
           />
 
           {/* Properties Panel Configuration Shell */}
