@@ -8,8 +8,7 @@ import PreviewPanel from '../components/PreviewPanel';
 import { useReportGenerator } from '../hooks/useReportGenerator';
 import { useComponentDrag } from '../hooks/useComponentDrag';
 import { useProject } from '../context/ProjectContext';
-import CSVUploader from '../components/datasource/CSVUploader';
-import DataPreview from '../components/datasource/DataPreview';
+import DatasourceSetup from '../components/datasource/DatasourceSetup';
 
 const DesignerPage = () => {
   // Project Context
@@ -19,35 +18,26 @@ const DesignerPage = () => {
     currentHeaders, 
     uploadCSV, 
     refreshData,
-    loading: projectLoading 
+    loading: projectLoading,
+    hasDatasource,
+    selectProject
   } = useProject();
 
-  // CSV State - use project data if available
+  // CSV State
   const [csvData, setCsvData] = useState(currentData || []);
   const [csvHeaders, setCsvHeaders] = useState(currentHeaders || []);
   const [csvFileName, setCsvFileName] = useState('');
 
-  // Update when project data changes
-  useEffect(() => {
-    if (currentData && currentData.length > 0) {
-      setCsvData(currentData);
-      setCsvHeaders(currentHeaders || Object.keys(currentData[0] || {}));
-    }
-  }, [currentData, currentHeaders]);
-
-  // Global Workspace Theme Presets Engine State
+  // UI State
   const [currentTheme, setCurrentTheme] = useState('silicon');
-
-  // Components State
   const [components, setComponents] = useState([]);
   const [selectedComponentId, setSelectedComponentId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [nextId, setNextId] = useState(1);
-
-  // Fullscreen State
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showDataPreview, setShowDataPreview] = useState(false);
 
-  // Hooks (Destructure the Word export pipeline alongside PDF and Excel formats here)
+  // Hooks
   const {
     isGenerating,
     previewHtml,
@@ -55,9 +45,9 @@ const DesignerPage = () => {
     generatePreview,
     exitPreview,
     downloadHtml,
-    downloadPdf,   
+    downloadPdf,
     downloadXlsx,
-    downloadDocx // 👈 Extracted native Word processing compiler pipeline
+    downloadDocx
   } = useReportGenerator(csvData, components, currentTheme);
 
   const {
@@ -68,6 +58,14 @@ const DesignerPage = () => {
   } = useComponentDrag(components, setComponents);
 
   const selectedComponent = components.find(c => c.id === selectedComponentId) || null;
+
+  // Update when project data changes
+  useEffect(() => {
+    if (currentData && currentData.length > 0) {
+      setCsvData(currentData);
+      setCsvHeaders(currentHeaders || Object.keys(currentData[0] || {}));
+    }
+  }, [currentData, currentHeaders]);
 
   // Toggle Fullscreen
   const toggleFullscreen = useCallback(() => {
@@ -81,11 +79,9 @@ const DesignerPage = () => {
 
     setCsvFileName(file.name);
 
-    // Use project upload if project is selected
     if (currentProject) {
       try {
         await uploadCSV(file);
-        // Data will be updated via context
       } catch (error) {
         console.error('Upload failed:', error);
         alert('Failed to upload CSV: ' + error.message);
@@ -93,7 +89,7 @@ const DesignerPage = () => {
       return;
     }
 
-    // Fallback to local parsing (backward compatibility)
+    // Fallback to local parsing
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
@@ -209,55 +205,62 @@ const DesignerPage = () => {
     ));
   }, []);
 
-  // Handle manual CSV upload for project
-  const handleCSVUpload = async (file) => {
-    try {
-      await uploadCSV(file);
-      setCsvFileName(file.name);
-      alert('CSV uploaded successfully!');
-    } catch (error) {
-      console.error('Upload failed:', error);
-      alert('Failed to upload CSV: ' + error.message);
+  // Handle successful datasource configuration
+  const handleDatasourceConfigured = async () => {
+    // Refresh project data after datasource is configured
+    if (currentProject) {
+      await selectProject(currentProject.id);
+      if (refreshData) {
+        await refreshData();
+      }
     }
   };
 
-  // Determine if we should show project info
-  const hasProject = !!currentProject;
+  // Check if we should show datasource setup
+  const showDatasourceSetup = !hasDatasource && currentProject;
 
   return (
     <div className={`flex flex-col h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-indigo-50/20 font-sans antialiased select-none text-slate-800 ${isFullscreen && isPreviewMode ? 'fixed inset-0 z-50' : ''}`}>
       
-      {/* Top Toolbar */}
-      <Topbar
-        csvFileName={csvFileName}
-        onFileUpload={handleFileUpload}
-        onAddComponent={addComponent}
-        onGeneratePreview={generatePreview}
-        onExitPreview={exitPreview}
-        onDownloadHtml={downloadHtml}
-        onDownloadPdf={downloadPdf}   
-        onDownloadXlsx={downloadXlsx} 
-        onDownloadDocx={downloadDocx} // 👈 FIXED: Successfully wired Word document compilation parameter trigger link
-        isGenerating={isGenerating}
-        isPreviewMode={isPreviewMode}
-        csvHeaders={csvHeaders}
-        componentsCount={components.length}
-        onToggleFullscreen={toggleFullscreen}
-        isFullscreen={isFullscreen}
-        currentTheme={currentTheme}
-        onThemeChange={setCurrentTheme}
-        hasProject={hasProject}
-        projectName={currentProject?.name}
-        onToggleDataSource={() => setActiveTab(activeTab === 'designer' ? 'datasource' : 'designer')}
-        showDataSource={activeTab === 'datasource'}
-      />
+      {/* Top Toolbar - Only show if datasource is configured */}
+      {!showDatasourceSetup && (
+        <Topbar
+          csvFileName={csvFileName}
+          onFileUpload={handleFileUpload}
+          onAddComponent={addComponent}
+          onGeneratePreview={generatePreview}
+          onExitPreview={exitPreview}
+          onDownloadHtml={downloadHtml}
+          onDownloadPdf={downloadPdf}
+          onDownloadXlsx={downloadXlsx}
+          onDownloadDocx={downloadDocx}
+          isGenerating={isGenerating}
+          isPreviewMode={isPreviewMode}
+          csvHeaders={csvHeaders}
+          componentsCount={components.length}
+          onToggleFullscreen={toggleFullscreen}
+          isFullscreen={isFullscreen}
+          currentTheme={currentTheme}
+          onThemeChange={setCurrentTheme}
+          hasProject={!!currentProject}
+          projectName={currentProject?.name}
+        />
+      )}
 
       {/* Main Content */}
       {isPreviewMode && previewHtml ? (
         <PreviewPanel html={previewHtml} />
+      ) : showDatasourceSetup ? (
+        /* Datasource Setup View */
+        <div className="flex-1 overflow-y-auto">
+          <DatasourceSetup 
+            projectId={currentProject?.id}
+            onConfigured={handleDatasourceConfigured}
+          />
+        </div>
       ) : (
+        /* Report Designer View */
         <div className="flex flex-1 overflow-hidden">
-          
           {/* Left Sidebar */}
           <Sidebar 
             csvFileName={csvFileName}
@@ -265,105 +268,35 @@ const DesignerPage = () => {
             components={components}
           />
 
-          {/* Main Area - Designer or Data Source */}
+          {/* Canvas */}
           <div className="flex-1 flex flex-col overflow-hidden">
-            {activeTab === 'designer' ? (
-              <Canvas
-                components={components}
-                csvData={csvData}
-                csvHeaders={csvHeaders}
-                selectedComponentId={selectedComponentId}
-                editingId={editingId}
-                draggedIdx={draggedIdx}
-                onSelectComponent={setSelectedComponentId}
-                onEditComponent={setEditingId}
-                onTextEdit={handleTextEdit}
-                onDeleteComponent={deleteComponent}
-                onDragStart={handleDragStart}
-                onDragOver={handleDragOver}
-                onDragEnd={handleDragEnd}
-                currentTheme={currentTheme}
-              />
-            ) : (
-              <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
-                <div className="max-w-4xl mx-auto space-y-6">
-                  {/* Project Info */}
-                  {hasProject && (
-                    <div className="bg-white rounded-xl border border-slate-200 p-4 flex items-center justify-between">
-                      <div>
-                        <div className="text-sm font-medium text-slate-500">Current Project</div>
-                        <div className="text-lg font-semibold text-slate-800">{currentProject.name}</div>
-                      </div>
-                      <button
-                        onClick={() => refreshData()}
-                        className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        Refresh Data
-                      </button>
-                    </div>
-                  )}
-
-                  {/* CSV Uploader */}
-                  <CSVUploader 
-                    onUpload={handleCSVUpload}
-                    loading={projectLoading}
-                    currentHeaders={csvHeaders}
-                  />
-
-                  {/* Data Statistics */}
-                  {csvData.length > 0 && (
-                    <div className="bg-white rounded-xl border border-slate-200 p-4 grid grid-cols-3 gap-4">
-                      <div>
-                        <div className="text-sm text-slate-500">Total Records</div>
-                        <div className="text-2xl font-bold text-slate-800">{csvData.length}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-slate-500">Columns</div>
-                        <div className="text-2xl font-bold text-slate-800">{csvHeaders.length}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-slate-500">Project</div>
-                        <div className="text-2xl font-bold text-slate-800">{hasProject ? '✅' : '❌'}</div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Data Preview Toggle */}
-                  {csvData.length > 0 && (
-                    <button
-                      onClick={() => setShowDataPreview(!showDataPreview)}
-                      className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors flex items-center justify-between"
-                    >
-                      <span className="font-medium text-slate-700">
-                        {showDataPreview ? 'Hide' : 'Show'} Data Preview
-                      </span>
-                      <svg className={`w-5 h-5 text-slate-400 transition-transform ${showDataPreview ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                  )}
-
-                  {/* Data Preview */}
-                  {showDataPreview && <DataPreview data={csvData} />}
-                </div>
-              </div>
-            )}
+            <Canvas
+              components={components}
+              csvData={csvData}
+              csvHeaders={csvHeaders}
+              selectedComponentId={selectedComponentId}
+              editingId={editingId}
+              draggedIdx={draggedIdx}
+              onSelectComponent={setSelectedComponentId}
+              onEditComponent={setEditingId}
+              onTextEdit={handleTextEdit}
+              onDeleteComponent={deleteComponent}
+              onDragStart={handleDragStart}
+              onDragOver={handleDragOver}
+              onDragEnd={handleDragEnd}
+              currentTheme={currentTheme}
+            />
           </div>
 
           {/* Properties Panel */}
-          {activeTab === 'designer' && (
-            <PropertiesPanel
-              selectedComponent={selectedComponent}
-              onUpdateComponent={updateComponent}
-              onDeleteComponent={deleteComponent}
-              csvHeaders={csvHeaders}
-              csvData={csvData}
-              currentTheme={currentTheme}
-            />
-          )}
+          <PropertiesPanel
+            selectedComponent={selectedComponent}
+            onUpdateComponent={updateComponent}
+            onDeleteComponent={deleteComponent}
+            csvHeaders={csvHeaders}
+            csvData={csvData}
+            currentTheme={currentTheme}
+          />
         </div>
       )}
     </div>

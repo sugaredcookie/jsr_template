@@ -45,17 +45,23 @@ export const ProjectProvider = ({ children }) => {
       const project = await apiService.getProject(projectId);
       setCurrentProject(project);
 
-      // Check datasource status first
+      // Check datasource status - THIS IS THE CRITICAL FIX
       try {
         const status = await apiService.getDatasourceStatus(projectId);
         setHasDatasource(status.configured);
         
         // Only fetch data if datasource is configured
         if (status.configured) {
-          const dataResponse = await apiService.getProjectData(projectId);
-          const data = dataResponse.data || [];
-          setCurrentData(data);
-          setCurrentHeaders(data.length > 0 ? Object.keys(data[0]) : []);
+          try {
+            const dataResponse = await apiService.getProjectData(projectId);
+            const data = dataResponse.data || [];
+            setCurrentData(data);
+            setCurrentHeaders(data.length > 0 ? Object.keys(data[0]) : []);
+          } catch (err) {
+            console.warn('Failed to fetch project data:', err);
+            setCurrentData([]);
+            setCurrentHeaders([]);
+          }
         } else {
           setCurrentData([]);
           setCurrentHeaders([]);
@@ -67,11 +73,12 @@ export const ProjectProvider = ({ children }) => {
         setCurrentHeaders([]);
       }
 
-      // Get templates
+      // Get templates (handle 404 gracefully)
       try {
         const templatesData = await apiService.getTemplates(projectId);
-        setTemplates(templatesData);
+        setTemplates(templatesData || []);
       } catch (err) {
+        console.warn('Failed to fetch templates:', err);
         setTemplates([]);
       }
 
@@ -129,10 +136,15 @@ export const ProjectProvider = ({ children }) => {
       setHasDatasource(true);
       
       // Refresh data after upload
-      const dataResponse = await apiService.getProjectData(currentProject.id, true);
-      const data = dataResponse.data || [];
-      setCurrentData(data);
-      setCurrentHeaders(data.length > 0 ? Object.keys(data[0]) : []);
+      try {
+        const dataResponse = await apiService.getProjectData(currentProject.id, true);
+        const data = dataResponse.data || [];
+        setCurrentData(data);
+        setCurrentHeaders(data.length > 0 ? Object.keys(data[0]) : []);
+      } catch (err) {
+        console.warn('Failed to fetch data after upload:', err);
+      }
+      
       setError(null);
       return result;
     } catch (err) {
@@ -171,7 +183,7 @@ export const ProjectProvider = ({ children }) => {
     try {
       const result = await apiService.createTemplate(currentProject.id, templateData);
       const templatesData = await apiService.getTemplates(currentProject.id);
-      setTemplates(templatesData);
+      setTemplates(templatesData || []);
       setError(null);
       return result;
     } catch (err) {
@@ -203,23 +215,6 @@ export const ProjectProvider = ({ children }) => {
     }
   };
 
-  const configureDatasource = async (type, config) => {
-    if (!currentProject) throw new Error('No project selected');
-    
-    setLoading(true);
-    try {
-      const result = await apiService.updateDatasourceConfig(currentProject.id, { type, config });
-      setHasDatasource(true);
-      setError(null);
-      return result;
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const value = {
     projects,
     currentProject,
@@ -237,7 +232,6 @@ export const ProjectProvider = ({ children }) => {
     refreshData,
     saveTemplate,
     generateReport,
-    configureDatasource,
     setCurrentProject,
   };
 
