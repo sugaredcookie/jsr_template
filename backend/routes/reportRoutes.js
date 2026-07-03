@@ -1,38 +1,20 @@
 const express = require('express');
-const multer = require('multer');
-const path = require('path');
-const { generateReport } = require('../controllers/reportController');
-
 const router = express.Router();
+const reportController = require('../controllers/reportController');
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '../uploads'));
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, `csv-${uniqueSuffix}.csv`);
-  }
-});
+// These endpoints maintain backward compatibility with existing frontend
+// but now support project-based architecture
 
-const fileFilter = (req, file, cb) => {
-  if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
-    cb(null, true);
-  } else {
-    cb(new Error('Only CSV files are allowed'), false);
-  }
-};
+// Generate report preview
+router.post('/preview', reportController.previewReport);
 
-const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit
-  },
-  fileFilter: fileFilter
-});
+// Generate HTML report
+router.post('/html', reportController.generateHTML);
 
-// Routes
-router.post('/generate', upload.single('csvFile'), generateReport);
+// Generate PDF report
+router.post('/pdf', reportController.generatePDF);
+
+// Get reports for a project
+router.get('/:projectId/reports', reportController.getReports);
 
 module.exports = router;

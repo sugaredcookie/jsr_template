@@ -1,80 +1,144 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const url = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 class ApiService {
-  async generatePreview(csvFile, templateJson) {
-    try {
-      // Validate inputs
-      if (!csvFile) {
-        throw new Error('CSV file is required');
-      }
-      
-      if (!templateJson || !templateJson.components) {
-        throw new Error('Valid template with components is required');
-      }
-
-      // Validate file type
-      if (!csvFile.name.endsWith('.csv') && csvFile.type !== 'text/csv') {
-        throw new Error('File must be a CSV');
-      }
-
-      // Validate file size (10MB limit)
-      if (csvFile.size > 10 * 1024 * 1024) {
-        throw new Error('File size exceeds 10MB limit');
-      }
-
-      const formData = new FormData();
-      formData.append('csvFile', csvFile);
-      formData.append('templateJson', JSON.stringify(templateJson));
-
-      const response = await fetch(`${API_BASE_URL}/report/generate`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      // Handle non-OK responses
-      if (!response.ok) {
-        let errorMessage;
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorData.message || `HTTP error! status: ${response.status}`;
-        } catch {
-          errorMessage = `HTTP error! status: ${response.status}`;
-        }
-        throw new Error(errorMessage);
-      }
-
-      const data = await response.json();
-      
-      // Validate response structure
-      if (!data.success) {
-        throw new Error(data.message || 'Failed to generate preview');
-      }
-
-      if (!data.html) {
-        throw new Error('No HTML received from server');
-      }
-
-      console.log('✅ Preview received, HTML length:', data.html.length);
-      return data;
-    } catch (error) {
-      console.error('API Error:', error);
-      
-      // Rethrow with user-friendly message
-      if (error.message.includes('Failed to fetch')) {
-        throw new Error('Cannot connect to the server. Please ensure the backend is running.');
-      }
-      
-      throw error;
-    }
+  constructor() {
+    this.baseUrl = url;
   }
 
-  async healthCheck() {
-    try {
-      const response = await fetch(`${API_BASE_URL}/health`);
-      return response.ok;
-    } catch {
-      return false;
-    }
+  // === PROJECT ENDPOINTS ===
+  
+  async getProjects() {
+    const response = await fetch(`${this.baseUrl}/projects`);
+    if (!response.ok) throw new Error('Failed to fetch projects');
+    return response.json();
+  }
+
+  async createProject(data) {
+    const response = await fetch(`${this.baseUrl}/projects`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!response.ok) throw new Error('Failed to create project');
+    return response.json();
+  }
+
+  async getProject(projectId) {
+    const response = await fetch(`${this.baseUrl}/projects/${projectId}`);
+    if (!response.ok) throw new Error('Failed to fetch project');
+    return response.json();
+  }
+
+  async updateProject(projectId, data) {
+    const response = await fetch(`${this.baseUrl}/projects/${projectId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!response.ok) throw new Error('Failed to update project');
+    return response.json();
+  }
+
+  async deleteProject(projectId) {
+    const response = await fetch(`${this.baseUrl}/projects/${projectId}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) throw new Error('Failed to delete project');
+    return response.json();
+  }
+
+  // === DATASOURCE ENDPOINTS ===
+
+  async uploadCSV(projectId, file) {
+    const formData = new FormData();
+    formData.append('csv', file);
+    
+    const response = await fetch(`${this.baseUrl}/projects/${projectId}/upload`, {
+      method: 'POST',
+      body: formData
+    });
+    if (!response.ok) throw new Error('Failed to upload CSV');
+    return response.json();
+  }
+
+  async getProjectData(projectId, fresh = false) {
+    const response = await fetch(
+      `${this.baseUrl}/projects/${projectId}/data?fresh=${fresh}`
+    );
+    if (!response.ok) throw new Error('Failed to fetch project data');
+    return response.json();
+  }
+
+  async getDatasourceConfig(projectId) {
+    const response = await fetch(`${this.baseUrl}/projects/${projectId}/datasource`);
+    if (!response.ok) throw new Error('Failed to fetch datasource config');
+    return response.json();
+  }
+
+  async updateDatasourceConfig(projectId, config) {
+    const response = await fetch(`${this.baseUrl}/projects/${projectId}/datasource`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config)
+    });
+    if (!response.ok) throw new Error('Failed to update datasource config');
+    return response.json();
+  }
+
+  // === TEMPLATE ENDPOINTS ===
+
+  async getTemplates(projectId) {
+    const response = await fetch(`${this.baseUrl}/projects/${projectId}/templates`);
+    if (!response.ok) throw new Error('Failed to fetch templates');
+    return response.json();
+  }
+
+  async createTemplate(projectId, templateData) {
+    const response = await fetch(`${this.baseUrl}/projects/${projectId}/templates`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(templateData)
+    });
+    if (!response.ok) throw new Error('Failed to create template');
+    return response.json();
+  }
+
+  // === REPORT ENDPOINTS ===
+
+  async generateHTML(projectId, template) {
+    const response = await fetch(`${this.baseUrl}/reports/html`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectId, template })
+    });
+    if (!response.ok) throw new Error('Failed to generate HTML');
+    return response.json();
+  }
+
+  async generatePDF(projectId, template, options = {}) {
+    const response = await fetch(`${this.baseUrl}/reports/pdf`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectId, template, options })
+    });
+    if (!response.ok) throw new Error('Failed to generate PDF');
+    return response.json();
+  }
+
+  async previewReport(projectId, template) {
+    const response = await fetch(`${this.baseUrl}/reports/preview`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectId, template })
+    });
+    if (!response.ok) throw new Error('Failed to preview report');
+    return response.json();
+  }
+
+  async getProjectReports(projectId) {
+    const response = await fetch(`${this.baseUrl}/reports/${projectId}/reports`);
+    if (!response.ok) throw new Error('Failed to fetch reports');
+    return response.json();
   }
 }
 
