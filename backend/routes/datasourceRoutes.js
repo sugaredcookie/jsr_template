@@ -7,7 +7,7 @@ const multer = require('multer');
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: {
-        fileSize: 10 * 1024 * 1024 // 10MB limit
+        fileSize: 10 * 1024 * 1024
     },
     fileFilter: (req, file, cb) => {
         if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
@@ -29,6 +29,17 @@ router.put('/:projectId/datasource', datasourceController.updateDatasourceConfig
 
 // Configure local device datasource
 router.post('/:projectId/datasource/local', datasourceController.configureLocal);
+
+
+// Test database connection
+router.post('/:projectId/datasource/database/test', datasourceController.testDatabaseConnection);
+
+// Get database tables - uses query param for filePath
+router.get('/:projectId/datasource/database/tables', datasourceController.getDatabaseTables);
+
+// Configure database
+router.post('/:projectId/datasource/database', datasourceController.configureDatabase);
+
 
 // Upload CSV file
 router.post('/:projectId/upload', upload.single('csv'), datasourceController.uploadCSV);

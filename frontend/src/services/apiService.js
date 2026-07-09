@@ -214,6 +214,68 @@ class ApiService {
     });
     return this.handleResponse(response);
   }
+
+  // === DATABASE ENDPOINTS ===
+
+async testDatabaseConnection(projectId, config) {
+  try {
+    const response = await fetch(`${this.baseUrl}/${projectId}/datasource/database/test`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config)
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData.message || errorData.error || `HTTP error! status: ${response.status}`;
+      throw new Error(errorMessage);
+    }
+    
+    return response.json();
+  } catch (error) {
+    console.error('Test database connection error:', error);
+    throw error;
+  }
+}
+
+  async getDatabaseTables(projectId, filePath) {
+    try {
+      const url = `${this.baseUrl}/${projectId}/datasource/database/tables${filePath ? `?filePath=${encodeURIComponent(filePath)}` : ''}`;
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.message || errorData.error || `HTTP error! status: ${response.status}`;
+        throw new Error(errorMessage);
+      }
+      
+      return response.json();
+    } catch (error) {
+      console.error('Get database tables error:', error);
+      throw error;
+    }
+  }
+
+  async configureDatabase(projectId, config) {
+    try {
+      const response = await fetch(`${this.baseUrl}/${projectId}/datasource/database`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config)
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.message || errorData.error || `HTTP error! status: ${response.status}`;
+        throw new Error(errorMessage);
+      }
+      
+      return response.json();
+    } catch (error) {
+      console.error('Configure database error:', error);
+      throw error;
+    }
+  }
 }
 
 export default new ApiService();
