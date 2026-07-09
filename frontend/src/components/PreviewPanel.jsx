@@ -2,19 +2,14 @@ import React from 'react';
 
 const PreviewPanel = ({ html }) => {
   return (
-    <div className="flex-1 bg-slate-900/[0.02] overflow-auto p-10 flex justify-center items-start animate-fade-in">
-      {/* High-fidelity Vector Report Frame */}
-      <div className="w-full max-w-5xl border border-slate-200/60 bg-white shadow-2xl rounded-2xl overflow-hidden transition-all duration-500 hover:shadow-indigo-500/[0.02]">
+    <div className="flex-1 overflow-auto bg-slate-100 p-4">
+      <div className="max-w-5xl mx-auto">
         <iframe
-          id="report-preview-iframe" // ADDED: Explicit target ID selector anchor
+          id="report-preview-iframe"
           srcDoc={html}
-          title="Report Schema Sandbox View"
-          className="w-full min-h-[1150px]"
-          style={{ 
-            border: 'none',
-            backgroundColor: '#ffffff'
-          }}
           sandbox="allow-scripts allow-same-origin"
+          className="w-full h-[calc(100vh-80px)] bg-white rounded-xl shadow-lg border border-slate-200"
+          title="Report Preview"
         />
       </div>
     </div>

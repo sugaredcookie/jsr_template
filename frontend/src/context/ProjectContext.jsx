@@ -20,6 +20,7 @@ export const ProjectProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [hasDatasource, setHasDatasource] = useState(false);
+  const [csvFileName, setCsvFileName] = useState(''); // NEW: Store CSV filename
 
   useEffect(() => {
     loadProjects();
@@ -41,22 +42,32 @@ export const ProjectProvider = ({ children }) => {
   const selectProject = async (projectId) => {
     setLoading(true);
     try {
-      // Get project details
+      // Reset CSV filename when switching projects
+      setCsvFileName('');
+      
       const project = await apiService.getProject(projectId);
       setCurrentProject(project);
 
-      // Check datasource status - THIS IS THE CRITICAL FIX
       try {
         const status = await apiService.getDatasourceStatus(projectId);
         setHasDatasource(status.configured);
         
-        // Only fetch data if datasource is configured
         if (status.configured) {
           try {
             const dataResponse = await apiService.getProjectData(projectId);
             const data = dataResponse.data || [];
             setCurrentData(data);
             setCurrentHeaders(data.length > 0 ? Object.keys(data[0]) : []);
+            
+            // Try to get the filename from datasource config
+            try {
+              const config = await apiService.getDatasourceConfig(projectId);
+              if (config.configured && config.type === 'csv' && config.config?.path) {
+                setCsvFileName(config.config.path);
+              }
+            } catch (err) {
+              console.warn('Could not get datasource config:', err);
+            }
           } catch (err) {
             console.warn('Failed to fetch project data:', err);
             setCurrentData([]);
@@ -73,10 +84,9 @@ export const ProjectProvider = ({ children }) => {
         setCurrentHeaders([]);
       }
 
-      // Get templates (handle 404 gracefully)
       try {
         const templatesData = await apiService.getTemplates(projectId);
-        setTemplates(templatesData || []);
+        setTemplates(Array.isArray(templatesData) ? templatesData : []);
       } catch (err) {
         console.warn('Failed to fetch templates:', err);
         setTemplates([]);
@@ -117,6 +127,8 @@ export const ProjectProvider = ({ children }) => {
         setCurrentData([]);
         setCurrentHeaders([]);
         setHasDatasource(false);
+        setTemplates([]);
+        setCsvFileName('');
       }
       setError(null);
     } catch (err) {
@@ -134,8 +146,8 @@ export const ProjectProvider = ({ children }) => {
     try {
       const result = await apiService.uploadCSV(currentProject.id, file);
       setHasDatasource(true);
+      setCsvFileName(file.name); // Set the filename
       
-      // Refresh data after upload
       try {
         const dataResponse = await apiService.getProjectData(currentProject.id, true);
         const data = dataResponse.data || [];
@@ -171,6 +183,21 @@ export const ProjectProvider = ({ children }) => {
     } catch (err) {
       setError(err.message);
       throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadTemplates = async (projectId) => {
+    setLoading(true);
+    try {
+      const data = await apiService.getTemplates(projectId);
+      setTemplates(Array.isArray(data) ? data : []);
+      return data;
+    } catch (err) {
+      console.warn('Failed to load templates:', err);
+      setTemplates([]);
+      return [];
     } finally {
       setLoading(false);
     }
@@ -224,15 +251,18 @@ export const ProjectProvider = ({ children }) => {
     loading,
     error,
     hasDatasource,
+    csvFileName,
     loadProjects,
     selectProject,
     createProject,
     deleteProject,
     uploadCSV,
     refreshData,
+    loadTemplates,
     saveTemplate,
     generateReport,
     setCurrentProject,
+    setCsvFileName,
   };
 
   return (

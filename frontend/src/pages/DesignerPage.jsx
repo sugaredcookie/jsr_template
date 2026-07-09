@@ -10,7 +10,7 @@ import { useComponentDrag } from '../hooks/useComponentDrag';
 import { useProject } from '../context/ProjectContext';
 import DatasourceSetup from '../components/datasource/DatasourceSetup';
 
-const DesignerPage = () => {
+const DesignerPage = ({ onBackToProjects }) => {
   // Project Context
   const { 
     currentProject, 
@@ -20,13 +20,20 @@ const DesignerPage = () => {
     refreshData,
     loading: projectLoading,
     hasDatasource,
-    selectProject
+    selectProject,
+    templates: savedTemplates,
+    loadTemplates,
+    csvFileName, // Directly from context
+    setCsvFileName // Setter for context
   } = useProject();
 
   // CSV State
   const [csvData, setCsvData] = useState(currentData || []);
   const [csvHeaders, setCsvHeaders] = useState(currentHeaders || []);
-  const [csvFileName, setCsvFileName] = useState('');
+
+  // Template State
+  const [templateName, setTemplateName] = useState('');
+  const [currentTemplateId, setCurrentTemplateId] = useState(null);
 
   // UI State
   const [currentTheme, setCurrentTheme] = useState('silicon');
@@ -35,7 +42,7 @@ const DesignerPage = () => {
   const [editingId, setEditingId] = useState(null);
   const [nextId, setNextId] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [showDataPreview, setShowDataPreview] = useState(false);
+  const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
 
   // Hooks
   const {
@@ -47,7 +54,8 @@ const DesignerPage = () => {
     downloadHtml,
     downloadPdf,
     downloadXlsx,
-    downloadDocx
+    downloadDocx,
+    saveTemplate: saveTemplateHook,
   } = useReportGenerator(csvData, components, currentTheme);
 
   const {
@@ -58,6 +66,13 @@ const DesignerPage = () => {
   } = useComponentDrag(components, setComponents);
 
   const selectedComponent = components.find(c => c.id === selectedComponentId) || null;
+
+  // Load templates when project opens
+  useEffect(() => {
+    if (currentProject?.id) {
+      loadTemplates(currentProject.id);
+    }
+  }, [currentProject?.id]);
 
   // Update when project data changes
   useEffect(() => {
@@ -72,16 +87,16 @@ const DesignerPage = () => {
     setIsFullscreen(prev => !prev);
   }, []);
 
-  // Handle CSV Upload with Project Context
+  // Handle CSV Upload
   const handleFileUpload = useCallback(async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setCsvFileName(file.name);
-
     if (currentProject) {
       try {
         await uploadCSV(file);
+        // Set the filename in context
+        setCsvFileName(file.name);
       } catch (error) {
         console.error('Upload failed:', error);
         alert('Failed to upload CSV: ' + error.message);
@@ -98,6 +113,7 @@ const DesignerPage = () => {
           const headers = Object.keys(results.data[0]);
           setCsvHeaders(headers);
           setCsvData(results.data);
+          setCsvFileName(file.name);
           updateComponentsWithHeaders(headers);
         }
       },
@@ -105,7 +121,7 @@ const DesignerPage = () => {
         console.error('Error parsing CSV:', error);
       }
     });
-  }, [currentProject, uploadCSV]);
+  }, [currentProject, uploadCSV, setCsvFileName]);
 
   const updateComponentsWithHeaders = (headers) => {
     setComponents(prev => prev.map(comp => {
@@ -133,7 +149,7 @@ const DesignerPage = () => {
     }));
   };
 
-  // Add Component Factory
+  // Add Component
   const addComponent = useCallback((type) => {
     const currentId = nextId;
     let props = {};
@@ -205,9 +221,101 @@ const DesignerPage = () => {
     ));
   }, []);
 
-  // Handle successful datasource configuration
+  // Load Template
+  const handleLoadTemplate = useCallback((template) => {
+    if (!template) return;
+    
+    setIsLoadingTemplate(true);
+    try {
+      const loadedComponents = template.components || [];
+      setComponents(loadedComponents);
+      
+      if (template.theme) {
+        setCurrentTheme(template.theme);
+      }
+      
+      setCurrentTemplateId(template.id);
+      setTemplateName(template.name || '');
+      
+      const maxId = loadedComponents.reduce((max, comp) => Math.max(max, comp.id || 0), 0);
+      setNextId(maxId + 1);
+      
+      setSelectedComponentId(null);
+      setEditingId(null);
+      
+      console.log(`Loaded template: ${template.name} with ${loadedComponents.length} components`);
+    } catch (error) {
+      console.error('Failed to load template:', error);
+      alert('Failed to load template: ' + error.message);
+    } finally {
+      setIsLoadingTemplate(false);
+    }
+  }, []);
+
+  // New Template
+  const handleNewTemplate = useCallback(() => {
+    if (components.length > 0 && !window.confirm('This will clear the current design. Continue?')) {
+      return;
+    }
+    
+    setComponents([]);
+    setCurrentTheme('silicon');
+    setCurrentTemplateId(null);
+    setTemplateName('');
+    setNextId(1);
+    setSelectedComponentId(null);
+    setEditingId(null);
+  }, [components]);
+
+  // Save Template
+  const handleSaveTemplate = useCallback(async () => {
+    if (!currentProject) {
+      alert('No project selected');
+      return;
+    }
+
+    const name = templateName.trim() || 'Untitled Template';
+    const result = await saveTemplateHook(
+      currentProject.id,
+      name,
+      components,
+      currentTheme,
+      currentTemplateId
+    );
+
+    if (result) {
+      if (!currentTemplateId && result.template) {
+        setCurrentTemplateId(result.template.id);
+        setTemplateName(result.template.name);
+      }
+      await loadTemplates(currentProject.id);
+    }
+  }, [currentProject, templateName, components, currentTheme, currentTemplateId, saveTemplateHook, loadTemplates]);
+
+  // Generate Preview
+  const handleGeneratePreview = useCallback(() => {
+    if (!currentProject) {
+      alert('No project selected');
+      return;
+    }
+
+    generatePreview(currentProject.id);
+  }, [currentProject, generatePreview]);
+
+  // Download HTML
+  const handleDownloadHtml = useCallback(() => {
+    if (!currentProject) return;
+    downloadHtml(currentProject.id);
+  }, [currentProject, downloadHtml]);
+
+  // Download PDF
+  const handleDownloadPdf = useCallback(() => {
+    if (!currentProject) return;
+    downloadPdf(currentProject.id);
+  }, [currentProject, downloadPdf]);
+
+  // Handle datasource configured
   const handleDatasourceConfigured = async () => {
-    // Refresh project data after datasource is configured
     if (currentProject) {
       await selectProject(currentProject.id);
       if (refreshData) {
@@ -222,21 +330,20 @@ const DesignerPage = () => {
   return (
     <div className={`flex flex-col h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-indigo-50/20 font-sans antialiased select-none text-slate-800 ${isFullscreen && isPreviewMode ? 'fixed inset-0 z-50' : ''}`}>
       
-      {/* Top Toolbar - Only show if datasource is configured */}
+      {/* Top Toolbar */}
       {!showDatasourceSetup && (
         <Topbar
           csvFileName={csvFileName}
           onFileUpload={handleFileUpload}
           onAddComponent={addComponent}
-          onGeneratePreview={generatePreview}
+          onGeneratePreview={handleGeneratePreview}
           onExitPreview={exitPreview}
-          onDownloadHtml={downloadHtml}
-          onDownloadPdf={downloadPdf}
+          onDownloadHtml={handleDownloadHtml}
+          onDownloadPdf={handleDownloadPdf}
           onDownloadXlsx={downloadXlsx}
           onDownloadDocx={downloadDocx}
-          isGenerating={isGenerating}
+          isGenerating={isGenerating || isLoadingTemplate}
           isPreviewMode={isPreviewMode}
-          csvHeaders={csvHeaders}
           componentsCount={components.length}
           onToggleFullscreen={toggleFullscreen}
           isFullscreen={isFullscreen}
@@ -244,6 +351,14 @@ const DesignerPage = () => {
           onThemeChange={setCurrentTheme}
           hasProject={!!currentProject}
           projectName={currentProject?.name}
+          onSaveTemplate={handleSaveTemplate}
+          templateName={templateName}
+          onTemplateNameChange={setTemplateName}
+          templates={savedTemplates || []}
+          onLoadTemplate={handleLoadTemplate}
+          onNewTemplate={handleNewTemplate}
+          currentTemplateId={currentTemplateId}
+          onBackToProjects={onBackToProjects}
         />
       )}
 
@@ -251,7 +366,6 @@ const DesignerPage = () => {
       {isPreviewMode && previewHtml ? (
         <PreviewPanel html={previewHtml} />
       ) : showDatasourceSetup ? (
-        /* Datasource Setup View */
         <div className="flex-1 overflow-y-auto">
           <DatasourceSetup 
             projectId={currentProject?.id}
@@ -259,16 +373,14 @@ const DesignerPage = () => {
           />
         </div>
       ) : (
-        /* Report Designer View */
         <div className="flex flex-1 overflow-hidden">
-          {/* Left Sidebar */}
           <Sidebar 
             csvFileName={csvFileName}
             csvHeaders={csvHeaders}
             components={components}
+            csvData={csvData}
           />
 
-          {/* Canvas */}
           <div className="flex-1 flex flex-col overflow-hidden">
             <Canvas
               components={components}
@@ -288,7 +400,6 @@ const DesignerPage = () => {
             />
           </div>
 
-          {/* Properties Panel */}
           <PropertiesPanel
             selectedComponent={selectedComponent}
             onUpdateComponent={updateComponent}

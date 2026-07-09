@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { buildPreviewHtml } from '../utils/htmlBuilder';
-// Import html2pdf traditionally (ensure you run: npm install html2pdf.js)
 import html2pdf from 'html2pdf.js';
+import apiService from '../services/apiService';
 
 export const useReportGenerator = (csvData, components, currentTheme) => {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -10,11 +10,41 @@ export const useReportGenerator = (csvData, components, currentTheme) => {
 
   // Helper utility to construct polished corporate download strings
   const getProfessionalFilename = useCallback((extension) => {
-    const timestamp = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+    const timestamp = new Date().toISOString().split('T')[0];
     const themeLabel = currentTheme.charAt(0).toUpperCase() + currentTheme.slice(1);
     return `Executive_Report_${themeLabel}_${timestamp}.${extension}`;
   }, [currentTheme]);
 
+  // Helper to serialize components for API
+  const serializeComponents = useCallback((comps) => {
+    return comps.map(comp => ({
+      id: comp.id,
+      type: comp.type,
+      props: {
+        value: comp.props?.value || '',
+        fontSize: comp.props?.fontSize || 16,
+        bold: comp.props?.bold || false,
+        align: comp.props?.align || 'left',
+        color: comp.props?.color || '#1e293b',
+        fontFamily: comp.props?.fontFamily || 'Arial',
+        columns: comp.props?.columns || [],
+        columnMetadata: comp.props?.columnMetadata || {},
+        highlightRule: comp.props?.highlightRule || null,
+        repeatHeaderOnPageBreak: comp.props?.repeatHeaderOnPageBreak || false,
+        height: comp.props?.height || 24,
+        variant: comp.props?.variant || 'line',
+        columnsCount: comp.props?.columnsCount || 2,
+        gridItems: comp.props?.gridItems || [],
+        title: comp.props?.title || '',
+        chartType: comp.props?.chartType || 'bar',
+        xAxisColumn: comp.props?.xAxisColumn || '',
+        yAxisColumn: comp.props?.yAxisColumn || '',
+        operation: comp.props?.operation || 'COUNT'
+      }
+    }));
+  }, []);
+
+  // Generate Preview - ORIGINAL WORKING IMPLEMENTATION
   const generatePreview = useCallback(async () => {
     if (!csvData.length) {
       alert('Please upload a CSV file first.');
@@ -60,15 +90,82 @@ export const useReportGenerator = (csvData, components, currentTheme) => {
       return;
     }
 
-    // 1. Locate the sandboxed iframe element channel from the active viewport tree
-    const iframeTarget = document.getElementById('report-preview-iframe');
+    // Try multiple ways to get the iframe content
+    let targetElement = null;
+    let iframeTarget = null;
+    
+    // Try by ID first
+    iframeTarget = document.getElementById('report-preview-iframe');
+    
+    // If not found, try by class or other selectors
+    if (!iframeTarget) {
+      const iframes = document.querySelectorAll('iframe');
+      for (const iframe of iframes) {
+        try {
+          // Check if this iframe contains our preview content
+          const doc = iframe.contentWindow?.document;
+          if (doc && doc.body && doc.body.innerHTML.includes('Report Preview')) {
+            iframeTarget = iframe;
+            break;
+          }
+        } catch (e) {
+          // Skip cross-origin iframes
+          continue;
+        }
+      }
+    }
 
-    // 2. Drill into its internal document content window body segment
-    const targetElement = iframeTarget?.contentWindow?.document?.body;
+    // If still not found, try to find by checking if there's content
+    if (!iframeTarget) {
+      // Fallback: get the preview container directly
+      const previewContainer = document.querySelector('.preview-container') || 
+                              document.querySelector('[class*="preview"]');
+      if (previewContainer) {
+        // Create a temporary div with the preview content
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = previewHtml;
+        targetElement = tempDiv;
+      } else {
+        alert("Could not find preview content. Please generate preview first.");
+        return;
+      }
+    } else {
+      // Get the body from the iframe
+      try {
+        targetElement = iframeTarget.contentWindow?.document?.body;
+      } catch (e) {
+        console.error("Could not access iframe content:", e);
+        alert("Could not access preview content. Please generate preview first.");
+        return;
+      }
+    }
 
     if (!targetElement) {
       alert("Render pipeline synchronization exception: Could not capture active document frame context.");
       return;
+    }
+
+    // If we have a temporary div, we need to convert it
+    let elementToRender = targetElement;
+    if (targetElement.tagName === 'DIV' && !targetElement.isConnected) {
+      // It's a detached div, create a container
+      const container = document.createElement('div');
+      container.style.position = 'fixed';
+      container.style.left = '-9999px';
+      container.style.top = '0';
+      container.style.background = 'white';
+      container.style.padding = '40px';
+      container.style.width = '1000px';
+      container.innerHTML = targetElement.innerHTML;
+      document.body.appendChild(container);
+      elementToRender = container;
+      
+      // Clean up after a delay
+      setTimeout(() => {
+        if (container.parentNode) {
+          document.body.removeChild(container);
+        }
+      }, 10000);
     }
 
     const options = {
@@ -79,18 +176,20 @@ export const useReportGenerator = (csvData, components, currentTheme) => {
         scale: 2,
         useCORS: true,
         logging: false,
-        letterRendering: true
+        letterRendering: true,
+        width: 1100
       },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    // 3. Fire compiler directly on the isolated internal iframe graphics stream
+    // Fire compiler directly on the isolated internal iframe graphics stream
     html2pdf()
-      .from(targetElement)
+      .from(elementToRender)
       .set(options)
       .save()
       .catch((err) => {
         console.error("PDF generation pipeline encountered an error:", err);
+        alert("PDF generation failed. Please try again.");
       });
   }, [previewHtml, getProfessionalFilename]);
 
@@ -133,16 +232,83 @@ export const useReportGenerator = (csvData, components, currentTheme) => {
     URL.revokeObjectURL(url);
   }, [csvData, components, getProfessionalFilename]);
 
-  // Format 4: FIXED/ADDED: Zero-Dependency Native Word Document Engine Pipeline
+  // Format 4: Zero-Dependency Native Word Document Engine Pipeline
   const downloadDocx = useCallback(async () => {
-    const iframeTarget = document.getElementById('report-preview-iframe');
-    const iframeDoc = iframeTarget?.contentWindow?.document;
-
-    if (!iframeDoc) {
-      alert("Please generate the preview first.");
+    if (!previewHtml) {
+      alert("Generate preview first");
       return;
     }
 
+    let iframeTarget = document.getElementById('report-preview-iframe');
+    let iframeDoc = null;
+
+    // If not found by ID, try to find any iframe with our content
+    if (!iframeTarget) {
+      const iframes = document.querySelectorAll('iframe');
+      for (const iframe of iframes) {
+        try {
+          const doc = iframe.contentWindow?.document;
+          if (doc && doc.body && doc.body.innerHTML.includes('Report Preview')) {
+            iframeTarget = iframe;
+            break;
+          }
+        } catch (e) {
+          continue;
+        }
+      }
+    }
+
+    // Try to get the document
+    if (iframeTarget) {
+      try {
+        iframeDoc = iframeTarget.contentWindow?.document;
+      } catch (e) {
+        console.error("Could not access iframe document:", e);
+      }
+    }
+
+    // If we still don't have a document, build from previewHtml
+    if (!iframeDoc || !iframeDoc.body) {
+      // Create a temporary DOM element with the preview content
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = previewHtml;
+      
+      // Extract body content
+      const bodyContent = tempDiv.querySelector('body') || tempDiv;
+      
+      // Build the Word document directly from the HTML
+      const wordDocumentWrapper = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+        <head>
+          <meta charset="utf-8">
+          <style>
+            @page WordSection1 { size: 841.9pt 595.3pt; margin: 36pt; }
+            div.WordSection1 { page: WordSection1; }
+            table { width: 100% !important; border-collapse: collapse; }
+            td, th { border: 1px solid #cbd5e1; padding: 6px 8px; font-size: 10pt; }
+            th { background-color: #f1f5f9; font-weight: bold; }
+            img { max-width: 600px; height: auto; display: block; margin: 10px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="WordSection1">${bodyContent.innerHTML}</div>
+        </body>
+        </html>
+      `;
+
+      const blob = new Blob([wordDocumentWrapper], { type: 'application/msword' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = getProfessionalFilename('doc');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      return;
+    }
+
+    // If we have the iframe document, use the original method
     // 1. Clone the live body
     const clonedBody = iframeDoc.body.cloneNode(true);
 
@@ -157,17 +323,19 @@ export const useReportGenerator = (csvData, components, currentTheme) => {
         const liveCanvas = liveCanvases[i];
         const cloneCanvas = clonedCanvases[i];
 
-        // Capture the visual state from the LIVE canvas
-        const dataURL = liveCanvas.toDataURL('image/png');
+        if (liveCanvas && cloneCanvas) {
+          // Capture the visual state from the LIVE canvas
+          const dataURL = liveCanvas.toDataURL('image/png');
 
-        // Create an image tag
-        const img = document.createElement('img');
-        img.src = dataURL;
-        img.style.width = '100%';
-        img.style.maxWidth = '600px';
+          // Create an image tag
+          const img = document.createElement('img');
+          img.src = dataURL;
+          img.style.width = '100%';
+          img.style.maxWidth = '600px';
 
-        // Replace the canvas in the CLONE with the img
-        cloneCanvas.parentNode.replaceChild(img, cloneCanvas);
+          // Replace the canvas in the CLONE with the img
+          cloneCanvas.parentNode.replaceChild(img, cloneCanvas);
+        }
       } catch (e) {
         console.error("Canvas export failed:", e);
       }
@@ -202,7 +370,51 @@ export const useReportGenerator = (csvData, components, currentTheme) => {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, [getProfessionalFilename]);
+  }, [previewHtml, getProfessionalFilename]);
+
+  // === NEW: SAVE TEMPLATE - Supports both create and update ===
+  const saveTemplate = useCallback(async (projectId, name, templateComponents, theme, templateId = null) => {
+    if (!projectId) {
+      console.warn('No project ID provided for template save');
+      return null;
+    }
+    
+    if (!name) {
+      alert('Please provide a template name');
+      return null;
+    }
+    
+    setIsGenerating(true);
+    try {
+      const serializedComponents = serializeComponents(templateComponents || components);
+      
+      let result;
+      if (templateId) {
+        result = await apiService.updateTemplate(projectId, templateId, {
+          name,
+          components: serializedComponents,
+          theme: theme || currentTheme
+        });
+        console.log('Template updated:', result);
+      } else {
+        result = await apiService.createTemplate(projectId, {
+          name,
+          components: serializedComponents,
+          theme: theme || currentTheme
+        });
+        console.log('Template created:', result);
+      }
+      
+      alert(result.message || 'Template saved successfully!');
+      return result;
+    } catch (error) {
+      console.error('Template save failed:', error);
+      alert('Failed to save template: ' + error.message);
+      return null;
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [components, currentTheme, serializeComponents]);
 
   return {
     isGenerating,
@@ -213,6 +425,7 @@ export const useReportGenerator = (csvData, components, currentTheme) => {
     downloadHtml,
     downloadPdf,
     downloadXlsx,
-    downloadDocx // Exported clean Word file driver
+    downloadDocx,
+    saveTemplate
   };
 };
