@@ -1,7 +1,0 @@
-{
-  "configured": true,
-  "type": "csv",
-  "config": {
-    "path": "sample-simple.csv"
-  }
-}

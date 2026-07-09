@@ -1,2 +1,0 @@
-Timestamp,Level,Message,Source
-6/24/2026, 6:21:13 PM,error,[hmr] Failed to reload /src/App.jsx. This could be due to syntax errors or importing non-existent modules. (see errors above),console

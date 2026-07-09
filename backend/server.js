@@ -30,7 +30,6 @@ const createDirectories = () => {
     const dirs = [
         'storage/projects',
         'uploads',
-        'reports',
         'logs',
         'data'
     ];
@@ -46,10 +45,10 @@ const createDirectories = () => {
 
 createDirectories();
 
-// Routes
+// Routes - ORDER MATTERS! Put more specific routes first
 app.use('/api/projects', projectRoutes);
-app.use('/api', datasourceRoutes); // Datasource routes are under /api/:projectId/...
 app.use('/api/reports', reportRoutes);
+app.use('/api', datasourceRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -61,16 +60,28 @@ app.get('/', (req, res) => {
             reports: '/api/reports',
             datasource: '/api/:projectId/datasource',
             upload: '/api/:projectId/upload',
-            data: '/api/:projectId/data'
+            data: '/api/:projectId/data',
+            templates: '/api/projects/:projectId/templates'
         }
     });
 });
 
-// Error handling middleware
+// 404 handler - Must be after all routes
+app.use((req, res) => {
+    console.log(`❌ Route not found: ${req.method} ${req.url}`);
+    res.status(404).json({
+        error: 'Route not found',
+        method: req.method,
+        path: req.url,
+        message: `The endpoint ${req.method} ${req.url} does not exist`
+    });
+});
+
+// Error handling middleware - Must be last
 app.use((err, req, res, next) => {
     console.error('❌ Error:', err.stack);
     res.status(500).json({
-        error: 'Something went wrong!',
+        error: 'Internal Server Error',
         message: err.message,
         stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
     });
@@ -78,7 +89,26 @@ app.use((err, req, res, next) => {
 
 // Start server
 app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📊 Report Management API v2.0.0`);
+    console.log(`\n🚀 Server running on port ${PORT}`);
+    console.log(`📍 http://localhost:${PORT}`);
     console.log(`📁 Storage path: ${path.join(__dirname, 'storage', 'projects')}`);
+    console.log('\n📋 Available routes:');
+    console.log(`  GET  /api/projects`);
+    console.log(`  POST /api/projects`);
+    console.log(`  GET  /api/projects/:id`);
+    console.log(`  PUT  /api/projects/:id`);
+    console.log(`  DELETE /api/projects/:id`);
+    console.log(`  GET  /api/projects/:id/templates`);
+    console.log(`  POST /api/projects/:id/templates`);
+    console.log(`  GET  /api/projects/:id/templates/:tid`);
+    console.log(`  PUT  /api/projects/:id/templates/:tid`);
+    console.log(`  DELETE /api/projects/:id/templates/:tid`);
+    console.log(`  GET  /api/reports/:id/reports`);
+    console.log(`  POST /api/reports/html`);
+    console.log(`  POST /api/reports/pdf`);
+    console.log(`  POST /api/reports/preview`);
+    console.log(`  GET  /api/:id/datasource`);
+    console.log(`  PUT  /api/:id/datasource`);
+    console.log(`  POST /api/:id/upload`);
+    console.log(`  GET  /api/:id/data\n`);
 });
